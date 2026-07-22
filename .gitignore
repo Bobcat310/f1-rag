@@ -4,3 +4,4 @@ data/processed/
 chroma_db/
 __pycache__/
 .env
+data/f1.db
