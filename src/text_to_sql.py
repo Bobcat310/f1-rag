@@ -1,6 +1,7 @@
 """Text-to-SQL path, moved from notebook 05. See that notebook for how it was evaluated."""
 import os
 import re
+import unicodedata
 from pathlib import Path
 
 import duckdb
@@ -62,6 +63,11 @@ def build_prompt(question: str):
 
 
 NO_SQL = "NO_SQL"
+# Values a correct query can use without the question saying them
+SAFE_WORDS = {"grand", "prix", "finished", "lapped"}
+SAFE_NUMBERS = {0, 1, 2, 3}
+# Switch off to measure what the check adds
+USE_VALUE_GUARD = True
 
 def clean_sql(text: str) -> str:
     """Pull one statement out of the model's reply. Multi-line SQL is kept."""
@@ -101,14 +107,14 @@ def execute_sql(sql: str) -> tuple:
 
 
 def fix_sql(question: str, sql: str, error: str, prompt=build_prompt) -> str:
-    """Show the model its own failed query and DuckDB's error message."""
+    """Show the model its own failed query and what was wrong with it."""
     message = f"""{resolve_prompt(prompt, question)}
 
 The query below failed. Return one corrected SELECT statement and nothing else.
 
 Q: {question}
 Failed SQL: {sql}
-DuckDB error: {error.splitlines()[0]}
+Error: {error.splitlines()[0]}
 A:"""
     response = client.chat(
         model=MODEL,
@@ -118,14 +124,50 @@ A:"""
     return clean_sql(response["message"]["content"])
 
 
+def words(text: str) -> list:
+    """Lowercase words with accents removed, so Raikkonen matches Räikkönen."""
+    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    return re.findall(r"[a-z0-9]+", plain.lower())
+
+
+def invented_values(sql: str, question: str) -> list:
+    """
+    Names and numbers in the SQL that the question never mentioned. The model copies
+    example values into filters, and those queries run fine, so only this catches them.
+    """
+    asked = set(words(question))
+    allowed_numbers = {int(n) for n in re.findall(r"\d+", question)} | SAFE_NUMBERS
+    for decade in re.findall(r"\b(\d{3})0s\b", question):
+        allowed_numbers |= set(range(int(decade) * 10, int(decade) * 10 + 10))
+
+    invented = []
+    for literal in re.findall(r"'((?:[^']|'')*)'", sql):
+        terms = [w for w in words(literal) if w not in SAFE_WORDS]
+        # hockenheimring is fine for "Hockenheim", so a long question word can be a prefix
+        known = any(t in asked or any(len(a) >= 5 and t.startswith(a) for a in asked) for t in terms)
+        if terms and not known:
+            invented.append(literal)
+
+    bare_sql = re.sub(r"'(?:[^']|'')*'", "''", sql)
+    bare_sql = re.sub(r"\bLIMIT\s+\d+", "", bare_sql, flags=re.IGNORECASE)
+    for number in re.findall(r"(?<![\w.])\d+(?![\w.])", bare_sql):
+        if int(number) not in allowed_numbers:
+            invented.append(number)
+    return invented
+
+
 def run_sql(question: str, prompt=build_prompt, max_retries: int = 2) -> dict:
-    """Generate and execute, feeding errors back up to max_retries times."""
+    """Generate, check and execute, feeding problems back up to max_retries times."""
     sql = generate_sql(question, prompt)
     attempts = 1
     while True:
         if sql == NO_SQL:
             return {"sql": sql, "df": None, "error": None, "attempts": attempts}
-        df, error = execute_sql(sql)
+        invented = invented_values(sql, question) if USE_VALUE_GUARD else []
+        if invented:
+            df, error = None, f"These values are not in the question, so remove those filters: {invented}"
+        else:
+            df, error = execute_sql(sql)
         if error is None or attempts > max_retries:
             return {"sql": sql, "df": df, "error": error, "attempts": attempts}
         sql = fix_sql(question, sql, error, prompt)
