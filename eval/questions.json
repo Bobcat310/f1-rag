@@ -39,5 +39,25 @@
   {"id": "test2_10", "split": "test2", "kind": "standings", "question": "Which team won the 2018 constructors championship?", "truth_sql": "SELECT constructor FROM f1_constructor_standings WHERE season=2018 AND position=1"},
   {"id": "test2_11", "split": "test2", "kind": "join", "question": "Which driver has the most wins at Interlagos?", "truth_sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id='interlagos' AND r.position=1 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
   {"id": "test2_12", "split": "test2", "kind": "unanswerable", "question": "What was the average pit stop time at the 2020 Italian Grand Prix?", "truth_sql": null},
-  {"id": "test2_13", "split": "test2", "kind": "unanswerable", "question": "Which driver is the most popular with fans?", "truth_sql": null}
+  {"id": "test2_13", "split": "test2", "kind": "unanswerable", "question": "Which driver is the most popular with fans?", "truth_sql": null},
+
+  {"id": "test3_01", "split": "test3", "kind": "fact", "question": "How many Grands Prix did Jim Clark win?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name='Jim Clark' AND position=1"},
+  {"id": "test3_02", "split": "test3", "kind": "fact", "question": "Who started on pole at the 2019 Italian Grand Prix?", "truth_sql": "SELECT driver_name FROM f1_results WHERE season=2019 AND race_name='Italian Grand Prix' AND grid=1"},
+  {"id": "test3_03", "split": "test3", "kind": "fact", "question": "Who finished second in the 2021 British Grand Prix?", "truth_sql": "SELECT driver_name FROM f1_results WHERE season=2021 AND race_name='British Grand Prix' AND position=2"},
+  {"id": "test3_04", "split": "test3", "kind": "fact", "question": "How many races were held in 2021?", "truth_sql": "SELECT COUNT(*) FROM f1_races WHERE season=2021"},
+  {"id": "test3_05", "split": "test3", "kind": "fact", "question": "How many wins did Red Bull have in 2023?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE season=2023 AND constructor='Red Bull' AND position=1"},
+  {"id": "test3_06", "split": "test3", "kind": "fact", "question": "Which driver has started the most races?", "truth_sql": "SELECT driver_name FROM f1_results GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
+  {"id": "test3_07", "split": "test3", "kind": "fact", "question": "What was Lewis Hamilton's points total in 2020?", "truth_sql": "SELECT SUM(points) FROM f1_results WHERE driver_name='Lewis Hamilton' AND season=2020"},
+  {"id": "test3_08", "split": "test3", "kind": "fact", "question": "Which team has the most constructors championships?", "truth_sql": "SELECT constructor FROM f1_constructor_standings WHERE position=1 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
+  {"id": "test3_09", "split": "test3", "kind": "router-trap", "question": "Name the winner of the 1976 Japanese Grand Prix.", "truth_sql": "SELECT driver_name FROM f1_results WHERE season=1976 AND race_name='Japanese Grand Prix' AND position=1"},
+  {"id": "test3_10", "split": "test3", "kind": "router-trap", "question": "Did Fernando Alonso win the 2006 Monaco Grand Prix?", "truth_sql": null, "accept": ["yes", "won", "1st"]},
+  {"id": "test3_11", "split": "test3", "kind": "narrative", "question": "Tell me about Max Verstappen at the 2023 Japanese Grand Prix", "truth_sql": null, "accept": ["1st", "won", "winner"]},
+  {"id": "test3_12", "split": "test3", "kind": "narrative", "question": "How did Lewis Hamilton do at the 2021 Abu Dhabi Grand Prix?", "truth_sql": null, "accept": ["2nd", "second"]},
+  {"id": "test3_13", "split": "test3", "kind": "narrative", "question": "What happened to Charles Leclerc at the 2022 Monaco Grand Prix?", "truth_sql": null, "accept": ["4th", "fourth"]},
+  {"id": "test3_14", "split": "test3", "kind": "narrative", "question": "Describe McLaren's 2024 constructors championship", "truth_sql": null, "accept": ["1st", "first", "won"]},
+  {"id": "test3_15", "split": "test3", "kind": "narrative", "question": "How did Ferrari do in the 2008 constructors championship?", "truth_sql": null, "accept": ["1st", "first", "won"]},
+  {"id": "test3_16", "split": "test3", "kind": "unanswerable", "question": "How much does a Ferrari F1 car cost?", "truth_sql": null},
+  {"id": "test3_17", "split": "test3", "kind": "unanswerable", "question": "Who is the team principal of Williams?", "truth_sql": null},
+  {"id": "test3_18", "split": "test3", "kind": "unanswerable", "question": "How many fans attended the 2023 British Grand Prix?", "truth_sql": null},
+  {"id": "test3_19", "split": "test3", "kind": "unanswerable", "question": "Who designed the McLaren MP4/4?", "truth_sql": null}
 ]
