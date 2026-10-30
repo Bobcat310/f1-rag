@@ -1,0 +1,106 @@
+[
+  {
+    "id": "test2_01",
+    "kind": "near-template",
+    "sql_right": false,
+    "vector_right": false,
+    "sql_answer": "Nigel Mansell did not win any races.",
+    "vector_answer": "2"
+  },
+  {
+    "id": "test2_02",
+    "kind": "near-template",
+    "sql_right": true,
+    "vector_right": false,
+    "sql_answer": "Jenson Button won the 2012 Brazilian Grand Prix.",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_03",
+    "kind": "aggregate",
+    "sql_right": false,
+    "vector_right": false,
+    "sql_answer": "Renault scored the most points in 2005 with 191.0.",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_04",
+    "kind": "aggregate",
+    "sql_right": true,
+    "vector_right": true,
+    "sql_answer": "McLaren scored 199.0 points in 1988.",
+    "vector_answer": "199.0"
+  },
+  {
+    "id": "test2_05",
+    "kind": "aggregate",
+    "sql_right": true,
+    "vector_right": false,
+    "sql_answer": "The average points scored by Ferrari per season is 149.717792.",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_06",
+    "kind": "domain",
+    "sql_right": true,
+    "vector_right": false,
+    "sql_answer": "Alain Prost scored 106 podiums.",
+    "vector_answer": "3."
+  },
+  {
+    "id": "test2_07",
+    "kind": "domain",
+    "sql_right": true,
+    "vector_right": false,
+    "sql_answer": "Michael Schumacher took 68 pole positions.",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_08",
+    "kind": "domain",
+    "sql_right": false,
+    "vector_right": false,
+    "sql_answer": "Sebastian Vettel failed to finish 19 races in 2014.",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_09",
+    "kind": "standings",
+    "sql_right": true,
+    "vector_right": false,
+    "sql_answer": "Result of the query:\ndriver_id\n   button",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_10",
+    "kind": "standings",
+    "sql_right": true,
+    "vector_right": true,
+    "sql_answer": "Mercedes won the 2018 constructors championship.",
+    "vector_answer": "Mercedes."
+  },
+  {
+    "id": "test2_11",
+    "kind": "join",
+    "sql_right": true,
+    "vector_right": false,
+    "sql_answer": "Michael Schumacher has the most wins at Interlagos with 4.",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_12",
+    "kind": "unanswerable",
+    "sql_right": true,
+    "vector_right": true,
+    "sql_answer": "That isn't in the database.",
+    "vector_answer": "Not in the context."
+  },
+  {
+    "id": "test2_13",
+    "kind": "unanswerable",
+    "sql_right": true,
+    "vector_right": true,
+    "sql_answer": "That isn't in the database.",
+    "vector_answer": "Not in the context."
+  }
+]

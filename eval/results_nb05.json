@@ -1,0 +1,1008 @@
+[
+  {
+    "label": "dev: prompt v1",
+    "totals": {
+      "correct": 6,
+      "silent_wrong": 4,
+      "error": 2,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "dev01",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Ayrton Senna' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "dev02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name, constructor FROM f1_results WHERE season = 2008 AND race_name LIKE '%British%' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "dev03",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name, SUM(points) FROM f1_results WHERE season = 2010 GROUP BY driver_name ORDER BY SUM(points) DESC LIMIT 1"
+      },
+      {
+        "id": "dev04",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT constructor) FROM f1_results WHERE driver_name = 'Fernando Alonso'"
+      },
+      {
+        "id": "dev05",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT TRY_CAST(AVG(points) AS REAL) / COUNT(DISTINCT season) FROM f1_results WHERE constructor = 'Mercedes'"
+      },
+      {
+        "id": "dev06",
+        "kind": "domain",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT driver_name, COUNT(*) AS podiums FROM f1_results WHERE circuit_name = 'Monaco' GROUP BY driver_name ORDER BY podiums DESC LIMIT 10"
+      },
+      {
+        "id": "dev07",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "dev08",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE season = 2016 AND status != 'Finished'"
+      },
+      {
+        "id": "dev09",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT constructor FROM f1_results WHERE TRY_CAST(position AS INTEGER) = 1 AND season = 2005"
+      },
+      {
+        "id": "dev10",
+        "kind": "join",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT driver_name, COUNT(*) AS wins FROM f1_results WHERE TRY_CAST(position AS INTEGER) = 1 AND circuit_name = 'Silverstone' GROUP BY driver_name ORDER BY wins DESC LIMIT 10"
+      },
+      {
+        "id": "dev11",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT MAX(TRY_CAST(position AS INTEGER)) AS age FROM f1_results WHERE TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "dev12",
+        "kind": "unanswerable",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "NO_SQL"
+      }
+    ]
+  },
+  {
+    "label": "dev: prompt v2",
+    "totals": {
+      "correct": 5,
+      "silent_wrong": 5,
+      "error": 2,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "dev01",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'monza' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "dev02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 AND c.date = '2008-07-06'"
+      },
+      {
+        "id": "dev03",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, SUM(r.points) AS total_points FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.season = 2010 GROUP BY r.driver_name ORDER BY total_points DESC LIMIT 1"
+      },
+      {
+        "id": "dev04",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT constructor) FROM f1_results WHERE driver_id = 'alonsodr'"
+      },
+      {
+        "id": "dev05",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT SUM(points) / COUNT(DISTINCT season) AS average FROM f1_results WHERE constructor = 'Mercedes'"
+      },
+      {
+        "id": "dev06",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS podiums FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'monza' AND r.position <= 3 GROUP BY r.driver_name ORDER BY podiums DESC LIMIT 1"
+      },
+      {
+        "id": "dev07",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE season = 2018 AND driver_name = 'Lewis Hamilton' AND grid = 1"
+      },
+      {
+        "id": "dev08",
+        "kind": "domain",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.status NOT LIKE '+%' AND r.season = 2016 AND d.driver_name = 'Lewis Hamilton'"
+      },
+      {
+        "id": "dev09",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT f1_constructor_standings.constructor FROM f1_constructor_standings WHERE season = 2005 ORDER BY points DESC LIMIT 1"
+      },
+      {
+        "id": "dev10",
+        "kind": "join",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'silverstone' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "dev11",
+        "kind": "join",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, d.dob FROM f1_results r JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 ORDER BY r.date - d.dob ASC LIMIT 1"
+      },
+      {
+        "id": "dev12",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, SUM(r.points) AS total_points FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_circuits c2 USING (circuit_id) JOIN f1_drivers d USING (driver_id) WHERE r.season = 2018 AND r.race_name = 'Italian Grand Prix' AND c2.circuit_name = 'Monza' GROUP BY r.driver_name ORDER BY total_points DESC LIMIT 1"
+      }
+    ]
+  },
+  {
+    "label": "dev: prompt v2 + retry",
+    "totals": {
+      "correct": 5,
+      "silent_wrong": 6,
+      "error": 1,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "dev01",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'monza' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "dev02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 AND c.date = '2008-07-06'"
+      },
+      {
+        "id": "dev03",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, SUM(r.points) AS total_points FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.season = 2010 GROUP BY r.driver_name ORDER BY total_points DESC LIMIT 1"
+      },
+      {
+        "id": "dev04",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT constructor) FROM f1_results WHERE driver_id = 'alonsodr'"
+      },
+      {
+        "id": "dev05",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT SUM(points) / COUNT(DISTINCT season) AS average FROM f1_results WHERE constructor = 'Mercedes'"
+      },
+      {
+        "id": "dev06",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS podiums FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'monza' AND r.position <= 3 GROUP BY r.driver_name ORDER BY podiums DESC LIMIT 1"
+      },
+      {
+        "id": "dev07",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE season = 2018 AND driver_name = 'Lewis Hamilton' AND grid = 1"
+      },
+      {
+        "id": "dev08",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 2,
+        "sql": "SELECT COUNT(*) FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.status NOT LIKE '+%' AND r.season = 2016 AND d.given_name = 'Lewis' AND d.family_name = 'Hamilton'"
+      },
+      {
+        "id": "dev09",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT f1_constructor_standings.constructor FROM f1_constructor_standings WHERE season = 2005 ORDER BY points DESC LIMIT 1"
+      },
+      {
+        "id": "dev10",
+        "kind": "join",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'silverstone' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "dev11",
+        "kind": "join",
+        "result": "error",
+        "attempts": 3,
+        "sql": "SELECT r.driver_name, d.dob FROM f1_results r JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 ORDER BY r.date - d.dob ASC LIMIT 1"
+      },
+      {
+        "id": "dev12",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, SUM(r.points) AS total_points FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_circuits c2 USING (circuit_id) JOIN f1_drivers d USING (driver_id) WHERE r.season = 2018 AND r.race_name = 'Italian Grand Prix' AND c2.circuit_name = 'Monza' GROUP BY r.driver_name ORDER BY total_points DESC LIMIT 1"
+      }
+    ]
+  },
+  {
+    "label": "dev: prompt v3",
+    "totals": {
+      "correct": 7,
+      "silent_wrong": 4,
+      "error": 1,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "dev01",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Ayrton Senna' AND race_name LIKE '%Monaco Grand Prix%' AND position = 1"
+      },
+      {
+        "id": "dev02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name FROM f1_results WHERE season = 2008 AND race_name = 'British Grand Prix' AND position = 1"
+      },
+      {
+        "id": "dev03",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT constructor, SUM(points) AS total FROM f1_results WHERE season = 2010 GROUP BY constructor ORDER BY total DESC LIMIT 1"
+      },
+      {
+        "id": "dev04",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT constructor) FROM f1_results WHERE driver_name = 'Fernando Alonso'"
+      },
+      {
+        "id": "dev05",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT SUM(points) / COUNT(DISTINCT season) AS average FROM f1_results WHERE constructor = 'Mercedes'"
+      },
+      {
+        "id": "dev06",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results r JOIN f1_races c USING (season, round) WHERE r.driver_name = 'Graham Hill' AND c.circuit_id = 'monaco' AND r.position <= 3"
+      },
+      {
+        "id": "dev07",
+        "kind": "domain",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND grid = 1"
+      },
+      {
+        "id": "dev08",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND season = 2016 AND status NOT LIKE '+%'"
+      },
+      {
+        "id": "dev09",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT constructor FROM f1_constructor_standings WHERE season = 2005 AND position = 1"
+      },
+      {
+        "id": "dev10",
+        "kind": "join",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'silverstone' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "dev11",
+        "kind": "join",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT d.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 AND c.date - d.dob = (SELECT MAX(c.date - d.dob) FROM f1_results rr JOIN f1_races cc USING (season, round) JOIN f1_drivers dd USING (driver_id))"
+      },
+      {
+        "id": "dev12",
+        "kind": "unanswerable",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "NO_SQL"
+      }
+    ]
+  },
+  {
+    "label": "dev: prompt v3 + retry",
+    "totals": {
+      "correct": 7,
+      "silent_wrong": 4,
+      "error": 1,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "dev01",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Ayrton Senna' AND race_name LIKE '%Monaco Grand Prix%' AND position = 1"
+      },
+      {
+        "id": "dev02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name FROM f1_results WHERE season = 2008 AND race_name = 'British Grand Prix' AND position = 1"
+      },
+      {
+        "id": "dev03",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT constructor, SUM(points) AS total FROM f1_results WHERE season = 2010 GROUP BY constructor ORDER BY total DESC LIMIT 1"
+      },
+      {
+        "id": "dev04",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT constructor) FROM f1_results WHERE driver_name = 'Fernando Alonso'"
+      },
+      {
+        "id": "dev05",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT SUM(points) / COUNT(DISTINCT season) AS average FROM f1_results WHERE constructor = 'Mercedes'"
+      },
+      {
+        "id": "dev06",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results r JOIN f1_races c USING (season, round) WHERE r.driver_name = 'Graham Hill' AND c.circuit_id = 'monaco' AND r.position <= 3"
+      },
+      {
+        "id": "dev07",
+        "kind": "domain",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND grid = 1"
+      },
+      {
+        "id": "dev08",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND season = 2016 AND status NOT LIKE '+%'"
+      },
+      {
+        "id": "dev09",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT constructor FROM f1_constructor_standings WHERE season = 2005 AND position = 1"
+      },
+      {
+        "id": "dev10",
+        "kind": "join",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'silverstone' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "dev11",
+        "kind": "join",
+        "result": "error",
+        "attempts": 3,
+        "sql": "SELECT d.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 AND c.date - d.dob = (SELECT MAX(c.date - d.dob) FROM f1_results rr JOIN f1_races cc USING (season, round) JOIN f1_drivers dd USING (driver_id))"
+      },
+      {
+        "id": "dev12",
+        "kind": "unanswerable",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "NO_SQL"
+      }
+    ]
+  },
+  {
+    "label": "test: prompt v1",
+    "totals": {
+      "correct": 4,
+      "silent_wrong": 8,
+      "error": 2,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "test01",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Michael Schumacher' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name, constructor FROM f1_results WHERE season = 2016 AND race_name LIKE '%Monaco%' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test03",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT constructor, COUNT(*) FROM f1_results WHERE season = 2019 GROUP BY constructor ORDER BY COUNT(*) DESC LIMIT 1"
+      },
+      {
+        "id": "test04",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT driver_name) FROM f1_results WHERE season = 2023 AND race_name LIKE '%Italian%' AND points > 0"
+      },
+      {
+        "id": "test05",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Kimi Raikkonen' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test06",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Ayrton Senna' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test07",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE season = 2022 AND status = 'DNF' AND driver_name = 'Max Verstappen'"
+      },
+      {
+        "id": "test08",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name, constructor FROM f1_results WHERE season = 1998 AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test09",
+        "kind": "join",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT driver_name, COUNT(*) AS wins FROM f1_results WHERE TRY_CAST(position AS INTEGER) = 1 AND circuit_name = 'Spa' GROUP BY driver_name ORDER BY wins DESC LIMIT 10"
+      },
+      {
+        "id": "test10",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT locality FROM f1_circuits GROUP BY locality ORDER BY COUNT(*) DESC LIMIT 1"
+      },
+      {
+        "id": "test11",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT MIN(T1.season) AS youngest_season FROM f1_results AS T1 INNER JOIN f1_driver_standings AS T2 ON T1.driver_id = T2.driver_id WHERE T2.wins = 1"
+      },
+      {
+        "id": "test12",
+        "kind": "join",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT T1.nationality, COUNT(*) AS wins FROM f1_results AS T1 INNER JOIN f1_driver_standings AS T2 ON T1.driver_id = T2.driver_id GROUP BY T1.nationality ORDER BY wins DESC LIMIT 10"
+      },
+      {
+        "id": "test13",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT MIN(q3) FROM f1_qualifying WHERE season = 2022 AND race_name LIKE '%Spanish%'"
+      },
+      {
+        "id": "test14",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT T1.q3 FROM f1_qualifying AS T1 INNER JOIN f1_results AS T2 ON T1.driver_id = T2.driver_name WHERE T1.season = 2021 AND T1.round = 1 AND T2.race_name LIKE '%British%'"
+      }
+    ]
+  },
+  {
+    "label": "test: prompt v2 + retry",
+    "totals": {
+      "correct": 2,
+      "silent_wrong": 12,
+      "error": 0,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "test01",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'monza' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "test02",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) WHERE r.race_name = 'Monaco Grand Prix' AND r.position = 1"
+      },
+      {
+        "id": "test03",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT SUM(points) AS total_points FROM f1_results WHERE season = 2019"
+      },
+      {
+        "id": "test04",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT driver_id) FROM f1_results WHERE season = 2023 AND status IN ('Finished', 'Lapped')"
+      },
+      {
+        "id": "test05",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS podiums FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position <= 3 AND r.driver_name = 'kimi raikkonen' GROUP BY r.driver_name ORDER BY podiums DESC LIMIT 1"
+      },
+      {
+        "id": "test06",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT SUM(CASE WHEN r.position = 1 THEN 1 ELSE 0 END) AS pole_positions FROM f1_results r JOIN f1_races c USING (season, round) WHERE r.driver_name = 'Ayrton Senna'"
+      },
+      {
+        "id": "test07",
+        "kind": "domain",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.status NOT LIKE '%Finished%' AND r.status NOT LIKE '%Lapped%' AND r.status NOT LIKE '+%' AND r.season = 2022 AND d.given_name = 'Max' AND d.family_name = 'Verstappen'"
+      },
+      {
+        "id": "test08",
+        "kind": "standings",
+        "result": "silent_wrong",
+        "attempts": 2,
+        "sql": "SELECT d.given_name, d.family_name FROM f1_results r JOIN f1_drivers d USING (driver_id) WHERE r.season = 1998 AND r.position = 1"
+      },
+      {
+        "id": "test09",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_circuits c2 USING (circuit_id) WHERE c2.circuit_name = 'Spa' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "test10",
+        "kind": "join",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT c.country, COUNT(*) AS total_races FROM f1_races r JOIN f1_circuits c USING (circuit_id) GROUP BY c.country ORDER BY total_races DESC LIMIT 1"
+      },
+      {
+        "id": "test11",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 3,
+        "sql": "SELECT d.given_name, d.family_name, d.dob FROM f1_results r JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 ORDER BY d.dob ASC LIMIT 1"
+      },
+      {
+        "id": "test12",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT d.given_name, d.family_name, COUNT(*) AS wins FROM f1_results r JOIN f1_drivers d USING (driver_id) WHERE r.season = 2018 AND r.position = 1 GROUP BY d.given_name, d.family_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "test13",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, SUM(r.points) / COUNT(DISTINCT r.season) AS average FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE c.circuit_id = 'barcelona' AND r.season = 2022 AND r.position = 1 GROUP BY r.driver_name"
+      },
+      {
+        "id": "test14",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 3,
+        "sql": "SELECT r.driver_name, c.circuit_name, r.grid, r.position, r.status, r.points, r.constructor, r.season \nFROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_circuits c2 USING (circuit_id) \nJOIN f1_drivers d USING (driver_id) \nWHERE r.driver_name LIKE '% Lewis Hamilton %' AND r.race_name = 'British Grand Prix' AND r.season = 2021 AND c.circuit_name = c2.circuit_name"
+      }
+    ]
+  },
+  {
+    "label": "test (seen): prompt v3 + retry",
+    "totals": {
+      "correct": 7,
+      "silent_wrong": 7,
+      "error": 0,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "test01",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Michael Schumacher' AND race_name LIKE '%Monaco Grand Prix%' AND position = 1"
+      },
+      {
+        "id": "test02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name FROM f1_results WHERE season = 2016 AND race_name = 'Monaco Grand Prix' AND position = 1"
+      },
+      {
+        "id": "test03",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT constructor, SUM(points) AS total FROM f1_results WHERE season = 2019 GROUP BY constructor ORDER BY total DESC LIMIT 1"
+      },
+      {
+        "id": "test04",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(DISTINCT driver_id) FROM f1_results WHERE season = 2023 AND race_name = 'Italian Grand Prix'"
+      },
+      {
+        "id": "test05",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Kimi Raikkonen' AND position <= 3"
+      },
+      {
+        "id": "test06",
+        "kind": "domain",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Ayrton Senna' AND grid = 1"
+      },
+      {
+        "id": "test07",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Max Verstappen' AND season = 2022 AND status NOT LIKE '+%'"
+      },
+      {
+        "id": "test08",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_id FROM f1_driver_standings WHERE season = 1998 AND position = 1"
+      },
+      {
+        "id": "test09",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'spafrancorchamps' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "test10",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT constructor FROM f1_results WHERE race_name LIKE 'Monaco Grand Prix' GROUP BY constructor ORDER BY COUNT(*) DESC LIMIT 1"
+      },
+      {
+        "id": "test11",
+        "kind": "join",
+        "result": "correct",
+        "attempts": 2,
+        "sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 ORDER BY c.date - d.dob ASC LIMIT 1"
+      },
+      {
+        "id": "test12",
+        "kind": "join",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT driver_name, COUNT(*) as num_wins \nFROM f1_results \nWHERE status = 'win' AND race_name LIKE '%Grand Prix%' \nGROUP BY driver_name \nORDER BY num_wins DESC"
+      },
+      {
+        "id": "test13",
+        "kind": "unanswerable",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "NO_SQL"
+      },
+      {
+        "id": "test14",
+        "kind": "unanswerable",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "NO_SQL"
+      }
+    ]
+  },
+  {
+    "label": "test2: prompt v1",
+    "totals": {
+      "correct": 4,
+      "silent_wrong": 8,
+      "error": 1,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "test2_01",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Nigel Mansell' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test2_02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name, constructor FROM f1_results WHERE season = 2012 AND race_name LIKE '%Brazilian%' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test2_03",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name, SUM(points) FROM f1_results WHERE season = 2005 GROUP BY driver_name ORDER BY SUM(points) DESC LIMIT 1"
+      },
+      {
+        "id": "test2_04",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT points FROM f1_results WHERE season = 1988"
+      },
+      {
+        "id": "test2_05",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT TRY_CAST(AVG(points) AS REAL) / 10 FROM f1_results WHERE constructor = 'Ferrari'"
+      },
+      {
+        "id": "test2_06",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Alain Prost' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test2_07",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Michael Schumacher' AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test2_08",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE season = 2014 AND status = 'DNF' AND driver_name = 'Sebastian Vettel'"
+      },
+      {
+        "id": "test2_09",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name, constructor FROM f1_results WHERE season = 2009 AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test2_10",
+        "kind": "standings",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT constructor FROM f1_results WHERE season = 2018 AND TRY_CAST(position AS INTEGER) = 1"
+      },
+      {
+        "id": "test2_11",
+        "kind": "join",
+        "result": "error",
+        "attempts": 1,
+        "sql": "SELECT driver_name, COUNT(*) AS wins FROM f1_results WHERE TRY_CAST(position AS INTEGER) = 1 AND circuit_name = 'Interlagos' GROUP BY driver_name ORDER BY wins DESC LIMIT 10"
+      },
+      {
+        "id": "test2_12",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT AVG(TRY_CAST(position AS REAL) - grid) FROM f1_results WHERE season = 2020 AND race_name = 'Italian Grand Prix'"
+      },
+      {
+        "id": "test2_13",
+        "kind": "unanswerable",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT driver_name FROM f1_results GROUP BY driver_name ORDER BY COUNT(*) DESC LIMIT 1"
+      }
+    ]
+  },
+  {
+    "label": "test2: prompt v3 + retry",
+    "totals": {
+      "correct": 10,
+      "silent_wrong": 3,
+      "error": 0,
+      "refused": 0
+    },
+    "rows": [
+      {
+        "id": "test2_01",
+        "kind": "near-template",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Nigel Mansell' AND race_name LIKE '%Monaco Grand Prix%' AND position = 1"
+      },
+      {
+        "id": "test2_02",
+        "kind": "near-template",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_name FROM f1_results WHERE season = 2012 AND race_name = 'Brazilian Grand Prix' AND position = 1"
+      },
+      {
+        "id": "test2_03",
+        "kind": "aggregate",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT constructor, SUM(points) AS total FROM f1_results WHERE season = 2005 GROUP BY constructor ORDER BY total DESC LIMIT 1"
+      },
+      {
+        "id": "test2_04",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT constructor, SUM(points) AS total FROM f1_results WHERE season = 1988 GROUP BY constructor ORDER BY total DESC LIMIT 1"
+      },
+      {
+        "id": "test2_05",
+        "kind": "aggregate",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT SUM(points) / COUNT(DISTINCT season) AS average FROM f1_results WHERE constructor = 'Ferrari'"
+      },
+      {
+        "id": "test2_06",
+        "kind": "domain",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Alain Prost' AND position <= 3"
+      },
+      {
+        "id": "test2_07",
+        "kind": "domain",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Michael Schumacher' AND grid = 1"
+      },
+      {
+        "id": "test2_08",
+        "kind": "domain",
+        "result": "silent_wrong",
+        "attempts": 1,
+        "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Sebastian Vettel' AND season = 2014 AND status NOT LIKE '+%'"
+      },
+      {
+        "id": "test2_09",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT driver_id FROM f1_driver_standings WHERE season = 2009 AND position = 1"
+      },
+      {
+        "id": "test2_10",
+        "kind": "standings",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT constructor FROM f1_constructor_standings WHERE season = 2018 AND position = 1"
+      },
+      {
+        "id": "test2_11",
+        "kind": "join",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'interlagos' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1"
+      },
+      {
+        "id": "test2_12",
+        "kind": "unanswerable",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "NO_SQL"
+      },
+      {
+        "id": "test2_13",
+        "kind": "unanswerable",
+        "result": "correct",
+        "attempts": 1,
+        "sql": "NO_SQL"
+      }
+    ]
+  }
+]
