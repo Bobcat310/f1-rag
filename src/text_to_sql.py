@@ -18,12 +18,14 @@ LLM_OPTIONS = {"temperature": 0, "seed": 42}
 
 BASE_PROMPT = """Write one DuckDB SELECT statement. Return only the SQL.
 
-f1_results (one row per driver per race): season, round, race_name, driver_id, driver_name, constructor, grid, position, points, status
-position = 1 is a win. race_name looks like 'Monaco Grand Prix'.
-Use the names and years from the question. Only filter on what the question asks for."""
+f1_results (one row per driver per race): season, round, race_name, driver_id, driver_name, constructor, grid, position, points
+position = 1 is a win. Match race_name exactly with = and the full name from the question.
+Only filter on names and years that appear in the question."""
 
 # (when the question matches, the note to add, an example of the pattern)
 HINTS = [
+    (r"\braces (were|have been) (held|run)\b", "To count races, use f1_races: season, round, race_name, circuit_id, date. Do not join it.",
+     "Q: How many races were held in 1999?\nA: SELECT COUNT(*) FROM f1_races WHERE season = 1999"),
     (r"\bpodiums?\b", "A podium means position <= 3.",
      "Q: How many podiums did Graham Hill score?\nA: SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Graham Hill' AND position <= 3"),
     (r"\bpoles?\b", "A pole position means grid = 1.",
@@ -34,9 +36,9 @@ HINTS = [
      "Q: What is the average points scored by Williams per season?\nA: SELECT SUM(points) / COUNT(DISTINCT season) AS average FROM f1_results WHERE constructor = 'Williams'"),
     (r"\bpoints\b(?!.*per season)", "Total points means SUM(points), not COUNT(*).",
      "Q: Which constructor scored the most points in 1996?\nA: SELECT constructor, SUM(points) AS total FROM f1_results WHERE season = 1996 GROUP BY constructor ORDER BY total DESC LIMIT 1"),
-    (r"\bconstructors? championship\b", "Use f1_constructor_standings: season, position, points, wins, constructor.",
+    (r"\bconstructors?'? championships?\b", "Use f1_constructor_standings: season, position, points, wins, constructor.",
      "Q: Which team won the 2011 constructors championship?\nA: SELECT constructor FROM f1_constructor_standings WHERE season = 2011 AND position = 1"),
-    (r"\bdrivers? championship\b", "Use f1_driver_standings: season, position, points, wins, driver_id.",
+    (r"\bdrivers?'? championships?\b", "Use f1_driver_standings: season, position, points, wins, driver_id.",
      "Q: Who won the 2011 drivers championship?\nA: SELECT driver_id FROM f1_driver_standings WHERE season = 2011 AND position = 1"),
     (r"\b(oldest|youngest)\b", "Age comes from f1_races.date and f1_drivers.dob. JOIN f1_races USING (season, round) and f1_drivers USING (driver_id).",
      "Q: Who was the youngest driver to finish on the podium?\nA: SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position <= 3 ORDER BY c.date - d.dob ASC LIMIT 1"),
@@ -48,7 +50,7 @@ HINTS = [
 NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|pit stops?|lap times?|favou?rite|popular|opinions?)\b", re.IGNORECASE)
 
 
-def build_prompt_v3(question: str):
+def build_prompt(question: str):
     """Returns the prompt, or None when the question needs data we don't have."""
     if NOT_IN_DATA.search(question):
         return None
@@ -75,7 +77,7 @@ def resolve_prompt(prompt, question: str):
     return prompt(question) if callable(prompt) else prompt
 
 
-def generate_sql(question: str, prompt=build_prompt_v3) -> str:
+def generate_sql(question: str, prompt=build_prompt) -> str:
     text = resolve_prompt(prompt, question)
     if text is None:
         return NO_SQL
@@ -98,7 +100,7 @@ def execute_sql(sql: str) -> tuple:
         return None, str(e)
 
 
-def fix_sql(question: str, sql: str, error: str, prompt=build_prompt_v3) -> str:
+def fix_sql(question: str, sql: str, error: str, prompt=build_prompt) -> str:
     """Show the model its own failed query and DuckDB's error message."""
     message = f"""{resolve_prompt(prompt, question)}
 
@@ -116,7 +118,7 @@ A:"""
     return clean_sql(response["message"]["content"])
 
 
-def run_sql(question: str, prompt=build_prompt_v3, max_retries: int = 2) -> dict:
+def run_sql(question: str, prompt=build_prompt, max_retries: int = 2) -> dict:
     """Generate and execute, feeding errors back up to max_retries times."""
     sql = generate_sql(question, prompt)
     attempts = 1
