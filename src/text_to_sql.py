@@ -13,7 +13,7 @@ con = duckdb.connect(str(PROJECT_ROOT / "data" / "f1.db"), read_only=True)
 client = ollama.Client(host=os.environ.get("F1_OLLAMA_URL", "http://localhost:11434"))
 
 MODEL = "llama3.2:3b"
-# temperature 0 and a fixed seed make runs repeatable
+# temperature 0 and a fixed seed keep runs close, though not always identical
 LLM_OPTIONS = {"temperature": 0, "seed": 42}
 
 
