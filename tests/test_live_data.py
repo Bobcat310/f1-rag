@@ -52,7 +52,7 @@ con.execute("CREATE TABLE f1_results (season BIGINT, round BIGINT, driver_id VAR
 
 problems = validate(tables, con, SEASON)
 assert any("fewer than 18" in p for p in problems), problems
-many = pd.concat([results.assign(driver_id=f"d{i}") for i in range(10)], ignore_index=True)
+many = pd.concat([results.iloc[[0]].assign(driver_id=f"d{i}") for i in range(20)], ignore_index=True)
 assert validate({**small, "f1_results": many}, con, SEASON) == []
 assert any("Duplicate" in p for p in validate({**small, "f1_results": pd.concat([many, many])}, con, SEASON))
 assert any("continuous" in p for p in validate({**small, "f1_results": many.assign(round=5)}, con, SEASON))
@@ -77,5 +77,6 @@ disk = duckdb.connect(str(path))
 assert disk.execute("SELECT race_name FROM f1_races").fetchall() == [("Keep Me",)], "rollback must restore the deleted rows"
 disk.close()
 path.unlink()
+Path(str(path) + ".wal").unlink(missing_ok=True)
 
 print("live_data checks passed")
