@@ -59,5 +59,26 @@
   {"id": "test3_16", "split": "test3", "kind": "unanswerable", "question": "How much does a Ferrari F1 car cost?", "truth_sql": null},
   {"id": "test3_17", "split": "test3", "kind": "unanswerable", "question": "Who is the team principal of Williams?", "truth_sql": null},
   {"id": "test3_18", "split": "test3", "kind": "unanswerable", "question": "How many fans attended the 2023 British Grand Prix?", "truth_sql": null},
-  {"id": "test3_19", "split": "test3", "kind": "unanswerable", "question": "Who designed the McLaren MP4/4?", "truth_sql": null}
+  {"id": "test3_19", "split": "test3", "kind": "unanswerable", "question": "Who designed the McLaren MP4/4?", "truth_sql": null},
+
+  {"id": "test4_01", "split": "test4", "kind": "fact", "question": "How many races did Jackie Stewart win?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name='Jackie Stewart' AND position=1"},
+  {"id": "test4_02", "split": "test4", "kind": "fact", "question": "Who won the 2015 Japanese Grand Prix?", "truth_sql": "SELECT driver_name FROM f1_results WHERE season=2015 AND race_name='Japanese Grand Prix' AND position=1"},
+  {"id": "test4_03", "split": "test4", "kind": "fact", "question": "Who finished third in the 2018 Belgian Grand Prix?", "truth_sql": "SELECT driver_name FROM f1_results WHERE season=2018 AND race_name='Belgian Grand Prix' AND position=3"},
+  {"id": "test4_04", "split": "test4", "kind": "fact", "question": "Who started on pole at the 2022 Bahrain Grand Prix?", "truth_sql": "SELECT driver_name FROM f1_results WHERE season=2022 AND race_name='Bahrain Grand Prix' AND grid=1"},
+  {"id": "test4_05", "split": "test4", "kind": "fact", "question": "How many wins did Ferrari have in 2002?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE season=2002 AND constructor='Ferrari' AND position=1"},
+  {"id": "test4_06", "split": "test4", "kind": "fact", "question": "How many races were held in 1950?", "truth_sql": "SELECT COUNT(*) FROM f1_races WHERE season=1950"},
+  {"id": "test4_07", "split": "test4", "kind": "fact", "question": "Which driver won the most races in 2014?", "truth_sql": "SELECT driver_name FROM f1_results WHERE season=2014 AND position=1 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
+  {"id": "test4_08", "split": "test4", "kind": "fact", "question": "Which constructor won the most races in 1988?", "truth_sql": "SELECT constructor FROM f1_results WHERE season=1988 AND position=1 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
+  {"id": "test4_09", "split": "test4", "kind": "fact", "question": "How many points did Sebastian Vettel score in 2013?", "truth_sql": "SELECT SUM(points) FROM f1_results WHERE season=2013 AND driver_name='Sebastian Vettel'"},
+  {"id": "test4_10", "split": "test4", "kind": "fact", "question": "How many podiums did Nico Rosberg score?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name='Nico Rosberg' AND position<=3"},
+  {"id": "test4_11", "split": "test4", "kind": "fact", "question": "How many pole positions did Nigel Mansell take?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name='Nigel Mansell' AND grid=1"},
+  {"id": "test4_12", "split": "test4", "kind": "fact", "question": "Which driver has the most career podiums?", "truth_sql": "SELECT driver_name FROM f1_results WHERE position<=3 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
+  {"id": "test4_13", "split": "test4", "kind": "narrative", "question": "Tell me about Daniel Ricciardo at the 2018 Monaco Grand Prix", "truth_sql": null, "accept": ["1st", "first", "won"]},
+  {"id": "test4_14", "split": "test4", "kind": "narrative", "question": "How did Mercedes do in the 2014 constructors championship?", "truth_sql": null, "accept": ["1st", "first", "won"]},
+  {"id": "test4_15", "split": "test4", "kind": "narrative", "question": "Describe Williams in the 1992 constructors championship", "truth_sql": null, "accept": ["1st", "first", "won"]},
+  {"id": "test4_16", "split": "test4", "kind": "unanswerable", "question": "Who is the CEO of Aston Martin?", "truth_sql": null},
+  {"id": "test4_17", "split": "test4", "kind": "unanswerable", "question": "How many people watched the 2022 Belgian Grand Prix on TV?", "truth_sql": null},
+  {"id": "test4_18", "split": "test4", "kind": "unanswerable", "question": "What is the top speed of a Red Bull RB19?", "truth_sql": null},
+  {"id": "test4_19", "split": "test4", "kind": "unanswerable", "question": "How many mechanics does McLaren employ?", "truth_sql": null},
+  {"id": "test4_20", "split": "test4", "kind": "unanswerable", "question": "Which driver has the biggest helmet collection?", "truth_sql": null}
 ]
