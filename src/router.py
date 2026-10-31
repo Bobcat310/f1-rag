@@ -22,9 +22,9 @@ def route(question: str) -> str:
     return "vector"
 
 
-def answer_vector(question: str) -> tuple:
-    ids = fused_search(question)
-    context = "\n".join(f"- {sentences[i]}" for i in ids)
+def answer_from_context(question: str, found: list) -> str:
+    """Generation alone. Passing the right sentence here tests the model without retrieval."""
+    context = "\n".join(f"- {sentence}" for sentence in found)
     prompt = f"""Answer the question in one or two sentences using ONLY the context below.
 Never guess or infer beyond the context. If the context does not state the answer, reply exactly: Not in the context.
 
@@ -38,7 +38,12 @@ Answer:"""
         messages=[{"role": "user", "content": prompt}],
         options=LLM_OPTIONS,
     )
-    return response["message"]["content"].strip(), [sentences[i] for i in ids]
+    return response["message"]["content"].strip()
+
+
+def answer_vector(question: str) -> tuple:
+    found = [sentences[i] for i in fused_search(question)]
+    return answer_from_context(question, found), found
 
 
 def usable(run: dict) -> bool:
