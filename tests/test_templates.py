@@ -108,6 +108,15 @@ assert invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 A
 assert not invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 AND round = 1", "Who won round 1 of 2021?")
 assert not invented_values("SELECT * FROM f1_results r JOIN f1_races c ON r.round = c.round WHERE r.season = 2021", "Who won in 2021?")
 
+AVERAGE = "SELECT ROUND(AVG(duration), 2) FROM f1_pit_stops WHERE duration <= 120 AND season = 2021"
+assert f"{one(AVERAGE):.2f}" in template_answer("What was the average pit stop time in 2021?")["answer"]
+assert f"{one(AVERAGE + " AND driver_id = 'hamilton'"):.2f}" in template_answer("What was the average pit stop time for Lewis Hamilton in 2021?")["answer"]
+assert "isn't in the data" in template_answer("What was the average pit stop time in 2004?")["answer"]
+declined("What was the average pit stop time?")
+for question in ("Who designed the Williams FW14B?", "Who owns the Haas team?"):
+    assert NOT_IN_DATA.search(question), question
+assert not NOT_IN_DATA.search("How many wins did Lewis Hamilton score on his own?")
+
 assert not invented_values("SELECT COUNT(*) FROM f1_results WHERE constructor LIKE '%Brabham%' AND grid = 1 AND position = 1", "How many wins from pole did Brabham have?")
 for question, note in (("How many wins from pole did Brabham have?", "LIKE '%Name%'"), ("How many wins do British drivers have?", "f1_drivers"),
                        ("How many laps did Senna complete?", "laps column"), ("What was the average pit stop time in 2022?", "duration <= 120")):

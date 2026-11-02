@@ -16,6 +16,7 @@ WINNER = re.compile(r"^(who (won|was the winner|finished first|came first|took (
 POLE = re.compile(r"^(who|which driver)\b.*\bpole\b")
 MOST = re.compile(r"^(who|which (driver|team|constructor))\b.*\bmost\b")
 PIT_STOPS = re.compile(r"\bpit stops?\b")
+AVERAGE_PIT = re.compile(r"^(what (is|was) )?(the )?(average|mean) pit stop\b")
 CHAMPION = re.compile(r"^(who|which (driver|team|constructor)) (won|was|became|took|claimed)\b.*\b(champion|championship|title)\b")
 
 DNF = "status <> 'Finished' AND status <> 'Lapped' AND status NOT LIKE '+%'"
@@ -38,6 +39,7 @@ COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all t
     earn earned start started secure secured""".split())
 MOST_FILLER = COUNT_FILLER | set("who which driver team constructor most".split())
 PIT_FILLER = SHARED_FILLER | set("how many pit stop stops make made take took during".split())
+AVERAGE_FILLER = PIT_FILLER | set("what average mean time duration length".split())
 TITLE_FILLER = SHARED_FILLER | set("""who which driver team constructor constructors drivers won was became took
     claimed world champion championship title""".split())
 
@@ -252,6 +254,32 @@ def pit_answer(text: str) -> dict:
     return {"answer": f"{driver} made {value} pit stop{'' if value == 1 else 's'} in {place}.", "sql": sql}
 
 
+def average_pit_answer(text: str) -> dict:
+    season = SEASON.search(text)
+    if season is None:
+        return None
+    year = int(season.group(1))
+    rest = text.replace(season.group(0), "")
+    round_no, race_name, rest = find_race(rest, year)
+    driver, rest = find_name(rest, DRIVERS)
+    if set(rest.split()) - AVERAGE_FILLER:
+        return None
+    if year < 2011:
+        return {"answer": "That isn't in the data: pit stops start in 2011.", "sql": None}
+    where = f"season = {year} AND duration <= 120"  # longer means a red flag, not a stop
+    if driver:
+        where += f" AND driver_id IN (SELECT driver_id FROM f1_results WHERE driver_name = {quoted(driver)})"
+    if round_no:
+        where += f" AND round = {round_no}"
+    sql = f"SELECT AVG(duration) FROM f1_pit_stops WHERE {where}"
+    value = con.execute(sql).fetchone()[0]
+    if value is None:
+        return None
+    who = f" for {driver}" if driver else ""
+    place = f"the {year} {race_name}" if round_no else str(year)
+    return {"answer": f"The average pit stop{who} in {place} took {number(value)} seconds, leaving out red flag stoppages.", "sql": sql}
+
+
 def team_filter(team: str) -> str:
     return f"constructor IN ({', '.join(quoted(name) for name in TEAMS[team])})"
 
@@ -302,6 +330,8 @@ def template_answer(question: str) -> dict:
     """An answer with its SQL, or None when the question doesn't fit a template exactly."""
     text = plain(question)
     season = SEASON.search(text)
+    if AVERAGE_PIT.search(text):
+        return average_pit_answer(text)
     if COUNT.search(text):
         return pit_answer(text) if PIT_STOPS.search(text) else count_answer(text)
     if MOST.search(text):
