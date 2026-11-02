@@ -13,6 +13,8 @@ DECADE = re.compile(r"\b(19[5-9]|20[0-2])0s\b")
 COUNT = re.compile(r"^(how many|what (is|was) the (total )?number of)\b")
 WINNER = re.compile(r"^(who (won|was the winner|finished first|came first|took (the )?(win|victory))|which (driver|team|constructor) won)\b")
 POLE = re.compile(r"^(who|which driver)\b.*\bpole\b")
+MOST = re.compile(r"^(who|which (driver|team|constructor))\b.*\bmost\b")
+PIT_STOPS = re.compile(r"\bpit stops?\b")
 CHAMPION = re.compile(r"^(who|which (driver|team|constructor)) (won|was|became|took|claimed)\b.*\b(champion|championship|title)\b")
 
 DNF = "status <> 'Finished' AND status <> 'Lapped' AND status NOT LIKE '+%'"
@@ -29,10 +31,12 @@ SHARED_FILLER = set("""the a an of in at did does do has have had his her their 
     race races grand prix gp formula one f1""".split())
 RACE_FILLER = SHARED_FILLER | set("""who which what driver team constructor won win winner finished first came took
     victory started start starting pole position qualified claimed got sat""".split())
-COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all time win wins won victory victories
+COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all time times grands win wins won victory victories
     pole poles position positions podium podiums finish finishes finished not fail failed retire retired
     retirement retirements dnf dnfs points score scored take took get got claim claimed achieve achieved
     earn earned start started secure secured""".split())
+MOST_FILLER = COUNT_FILLER | set("who which driver team constructor most".split())
+PIT_FILLER = SHARED_FILLER | set("how many pit stop stops make made take took during".split())
 TITLE_FILLER = SHARED_FILLER | set("""who which driver team constructor constructors drivers won was became took
     claimed world champion championship title""".split())
 
@@ -174,7 +178,8 @@ def count_answer(text: str) -> dict:
         return None  # never raced then, so 0 would mislead
 
     if condition is None:
-        sql = standings_points_sql(driver, team, period) or f"SELECT SUM(points) FROM f1_results WHERE {where}"
+        sql = standings_points_sql(driver, team, period) or (f"""SELECT (SELECT COALESCE(SUM(points), 0) FROM f1_results WHERE {where})
+                                                                    + (SELECT COALESCE(SUM(points), 0) FROM f1_sprint_results WHERE {where})""")
     elif team and not driver and condition in ("position = 1", "grid = 1"):
         # a shared drive puts two of a team's cars on one result
         sql = f"SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE {where} AND {condition}"
@@ -185,6 +190,47 @@ def count_answer(text: str) -> dict:
         return None
     subject = " for ".join(name for name in (driver, team) if name)
     return {"answer": f"{subject} had {value:g} {one if value == 1 else many}{when}.", "sql": sql}
+
+
+def most_answer(text: str) -> dict:
+    matched = [m for m in METRICS if re.search(m[0], text)]
+    if len(matched) != 1 or matched[0][1] is None:
+        return None  # season points need the standings, so that stays with the model
+    _, condition, _, many = matched[0]
+    period, when, rest = period_filter(text)
+    if set(rest.split()) - MOST_FILLER:
+        return None
+    column = "constructor" if re.search(r"\b(team|constructor)\b", text) else "driver_name"
+    total = "COUNT(DISTINCT season * 100 + round)" if column == "constructor" and "= 1" in condition else "COUNT(*)"
+    where = f"{period} AND {condition}" if period else condition
+    sql = f"SELECT {column}, {total} AS n FROM f1_results WHERE {where} GROUP BY 1 ORDER BY n DESC LIMIT 2"
+    rows = con.execute(sql).fetchall()
+    if not rows or (len(rows) == 2 and rows[0][1] == rows[1][1]):
+        return None  # a tie needs a list, not one name
+    return {"answer": f"{rows[0][0]} had the most {many}{when}, with {rows[0][1]}.", "sql": sql}
+
+
+def pit_answer(text: str) -> dict:
+    season = SEASON.search(text)
+    if season is None:
+        return None
+    year = int(season.group(1))
+    rest = text.replace(season.group(0), "")
+    round_no, race_name, rest = find_race(rest, year)
+    driver, rest = find_name(rest, DRIVERS)
+    if driver is None or set(rest.split()) - PIT_FILLER:
+        return None
+    if year < 2011:
+        return {"answer": "That isn't in the data: pit stops start in 2011.", "sql": None}
+    where = f"season = {year} AND driver_id IN (SELECT driver_id FROM f1_results WHERE driver_name = {quoted(driver)})"
+    if round_no:
+        where += f" AND round = {round_no}"
+    sql = f"SELECT COUNT(*) FROM f1_pit_stops WHERE {where}"
+    value = con.execute(sql).fetchone()[0]
+    if value == 0:
+        return None
+    place = f"the {year} {race_name}" if round_no else str(year)
+    return {"answer": f"{driver} made {value} pit stop{'' if value == 1 else 's'} in {place}.", "sql": sql}
 
 
 def standings_points_sql(driver, team, period) -> str:
@@ -202,7 +248,9 @@ def template_answer(question: str) -> dict:
     text = plain(question)
     season = SEASON.search(text)
     if COUNT.search(text):
-        return count_answer(text)
+        return pit_answer(text) if PIT_STOPS.search(text) else count_answer(text)
+    if MOST.search(text):
+        return most_answer(text)
     if season is None:
         return None
     year = int(season.group(1))

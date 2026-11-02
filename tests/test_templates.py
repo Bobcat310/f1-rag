@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.templates import template_answer
-from src.text_to_sql import con, invented_values, NOT_IN_DATA
+from src.text_to_sql import asks_for_missing_field, con, invented_values, NOT_IN_DATA
 
 
 def one(sql: str):
@@ -37,6 +37,12 @@ number("How many wins did Ferrari have in the 2000s?", "SELECT COUNT(DISTINCT se
 number("How many wins did Hamilton have for McLaren?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'hamilton' AND constructor = 'McLaren' AND position = 1")
 number("How many points did Max Verstappen score in 2021?", "SELECT s.points FROM f1_driver_standings s WHERE s.season = 2021 AND s.driver_id = 'max_verstappen'")
 number("How many points did McLaren score in 2024?", "SELECT points FROM f1_constructor_standings WHERE season = 2024 AND constructor = 'McLaren'")
+number("How many Grands Prix did Niki Lauda win?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'lauda' AND position = 1")
+number("How many times did Jean Alesi retire in 1995?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'alesi' AND season = 1995 AND status <> 'Finished' AND status <> 'Lapped' AND status NOT LIKE '+%'")
+number("How many points did Max Verstappen score?", "SELECT (SELECT SUM(points) FROM f1_results WHERE driver_id = 'max_verstappen') + (SELECT SUM(points) FROM f1_sprint_results WHERE driver_id = 'max_verstappen')")
+number("How many pit stops did Lewis Hamilton make in 2023?", "SELECT COUNT(*) FROM f1_pit_stops WHERE driver_id = 'hamilton' AND season = 2023")
+number("How many pit stops did Lewis Hamilton make at the 2023 Monaco Grand Prix?", "SELECT COUNT(*) FROM f1_pit_stops p JOIN f1_races r USING (season, round) WHERE p.driver_id = 'hamilton' AND p.season = 2023 AND r.race_name = 'Monaco Grand Prix'")
+assert "isn't in the data" in template_answer("How many pit stops did Michael Schumacher make in 2004?")["answer"]
 assert " 0 " in template_answer("How many races did Lewis Hamilton not finish in 2017?")["answer"]
 
 name("Who won the 2003 Canadian Grand Prix?", "Michael Schumacher")
@@ -48,6 +54,9 @@ name("Who won the 1951 Indianapolis 500?", "Lee Wallard")
 name("Who won the 2021 drivers championship?", "Max Verstappen")
 name("Which team won the 2011 constructors championship?", "Red Bull")
 name("Who was world champion in 1988?", "Ayrton Senna")
+name("Which driver won the most races in 1988?", "Ayrton Senna")
+name("Which team has the most wins in the 1990s?", "Williams")
+name("Who has the most pole positions?", "Lewis Hamilton")
 
 declined("How many wins did Schumacher have?")          # Michael and Ralf both won races
 declined("How many wins did Hamilton have at Monza?")   # a word the template can't use
@@ -60,6 +69,14 @@ declined("Who finished second in the 2021 drivers championship?")
 declined("Who won the British Grand Prix?")             # no season
 declined("Who won the 2026 drivers championship?")      # season still running
 declined("Who won the 2020 race at Silverstone?")       # two races there that year
+declined("Which driver won the most races for Ferrari?")
+declined("Which driver scored the most points in 2021?")
+
+for question in ("How many fans watched the 2019 British Grand Prix?", "Who was the team principal of Red Bull in 2015?",
+                 "How tall is Lando Norris?", "How much does a Ferrari engine cost?"):
+    assert asks_for_missing_field(question), question
+for question in ("How many wins did Senna have?", "Who was the youngest winner?", "Who was the 2021 champion?", "How many laps did Senna complete?"):
+    assert not asks_for_missing_field(question), question
 
 assert NOT_IN_DATA.search("How many laps did Max Verstappen lead in 2023?")
 assert NOT_IN_DATA.search("Who is the race engineer of Lewis Hamilton?")

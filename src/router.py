@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.retriever import fused_search, sentences
 from src.templates import template_answer
-from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, client, run_sql, sql_answer
+from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, asks_for_missing_field, client, run_sql, sql_answer
 
 
 NARRATIVE = re.compile(r"^\s*(tell me|describe|explain|why|how did|how was|compare|summari[sz]e|what happened)", re.IGNORECASE)
@@ -14,7 +14,7 @@ FACT = re.compile(r"\b(how many|who|which|most|average|total|what is the|fastest
 
 def route(question: str) -> str:
     """refuse: data we don't have. vector: open questions. sql: one exact answer."""
-    if NOT_IN_DATA.search(question):
+    if NOT_IN_DATA.search(question) or asks_for_missing_field(question):
         return "refuse"
     if NARRATIVE.search(question):
         return "vector"

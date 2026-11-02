@@ -41,6 +41,8 @@ HINTS = [
      "Q: Which team won the 2011 constructors championship?\nA: SELECT constructor FROM f1_constructor_standings WHERE season = 2011 AND position = 1"),
     (r"\bdrivers?'? championships?\b", "Use f1_driver_standings: season, position, points, wins, driver_id.",
      "Q: Who won the 2011 drivers championship?\nA: SELECT driver_id FROM f1_driver_standings WHERE season = 2011 AND position = 1"),
+    (r"\bpit stops?\b", "Use f1_pit_stops: season, round, race_name, driver_id, stop, lap, duration (in seconds). It starts in 2011.",
+     "Q: How many pit stops did Kimi Raikkonen make in 2013?\nA: SELECT COUNT(*) FROM f1_pit_stops WHERE driver_id = 'raikkonen' AND season = 2013"),
     (r"\b(oldest|youngest)\b", "Age comes from f1_races.date and f1_drivers.dob. JOIN f1_races USING (season, round) and f1_drivers USING (driver_id).",
      "Q: Who was the youngest driver to finish on the podium?\nA: SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position <= 3 ORDER BY c.date - d.dob ASC LIMIT 1"),
     (r"\bat (?!the\b)[A-Z]|\bcircuit\b", "f1_results has no circuit columns. JOIN f1_races USING (season, round). f1_races.circuit_id is the lowercase circuit name.",
@@ -48,9 +50,27 @@ HINTS = [
 ]
 
 # The dataset has none of this, so Python refuses without asking the model.
-NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|pit stops?|lap times?|favou?rite|popular|opinions?"
+NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|lap times?|favou?rite|popular|opinions?"
                          r"|engineers?|sponsors?|salary|salaries|contracts?|budgets?|attendance|penalt(y|ies)|overtak(es?|ing))\b"
                          r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b", re.IGNORECASE)
+
+# SQL can only answer for things the tables hold, so these list what they hold
+HOW_MANY = re.compile(r"\bhow many (\w+)", re.IGNORECASE)
+COUNTABLE = set("""race races grand grands win wins victory victories pole poles podium podiums point points driver drivers
+    constructor constructors team teams time times season seasons title titles championship championships lap laps pit
+    stop stops round rounds circuit circuits country countries different distinct consecutive fastest start starts
+    retirement retirements dnf dnfs finish finishes""".split())
+WHO_ROLE = re.compile(r"^\s*who (?:is|was) (?:the|his|her|their) (\w+)", re.IGNORECASE)
+ROLES = set("""winner champion first last youngest oldest fastest most best only leader runner second third driver
+    drivers constructors world teammate""".split())
+NO_MEASURE = re.compile(r"^\s*how (much|tall|heavy|big|long|fast|far)\b", re.IGNORECASE)
+
+
+def asks_for_missing_field(question: str) -> bool:
+    counted, role = HOW_MANY.search(question), WHO_ROLE.search(question)
+    return (NO_MEASURE.search(question) is not None
+            or (counted is not None and counted.group(1).lower() not in COUNTABLE)
+            or (role is not None and role.group(1).lower() not in ROLES and not role.group(1).isdigit()))
 
 
 def build_prompt(question: str):
