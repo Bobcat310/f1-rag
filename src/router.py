@@ -4,7 +4,7 @@ import re
 import pandas as pd
 
 from src.retriever import fused_search, sentences
-from src.templates import template_answer
+from src.templates import focus_lines, template_answer
 from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, asks_for_missing_field, client, run_sql, sql_answer
 
 
@@ -42,8 +42,15 @@ Answer:"""
     return response["message"]["content"].strip()
 
 
+def find_context(question: str, k: int = 5) -> list:
+    """Sentences about a race the question names go first, because every car's result looks alike to search."""
+    starts = tuple(focus_lines(question))
+    pinned = [s for s in sentences if s.startswith(starts)] if starts else []
+    return (pinned + [s for s in (sentences[i] for i in fused_search(question, k)) if s not in pinned])[:k]
+
+
 def answer_vector(question: str) -> tuple:
-    found = [sentences[i] for i in fused_search(question)]
+    found = find_context(question)
     return answer_from_context(question, found), found
 
 

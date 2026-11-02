@@ -248,6 +248,21 @@ def standings_points_sql(driver, team, period) -> str:
                WHERE s.{period} AND d.given_name || ' ' || d.family_name = {quoted(driver)}"""
 
 
+def focus_lines(question: str) -> list:
+    """Corpus sentence starts for a race the question names, and for a driver in that race."""
+    text = plain(question)
+    season = SEASON.search(text)
+    if season is None:
+        return []
+    year = int(season.group(1))
+    round_no, race_name, rest = find_race(text.replace(season.group(0), ""), year)
+    if round_no is None:
+        return []
+    driver, _ = find_name(rest, DRIVERS)
+    summary = f"The {year} {race_name} "
+    return [f"In the {year} {race_name}, {driver} ", summary] if driver else [summary]
+
+
 def template_answer(question: str) -> dict:
     """An answer with its SQL, or None when the question doesn't fit a template exactly."""
     text = plain(question)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.templates import template_answer
+from src.templates import focus_lines, template_answer
 from src.text_to_sql import asks_for_missing_field, con, invented_values, NOT_IN_DATA
 
 
@@ -89,5 +89,10 @@ assert not NOT_IN_DATA.search("Who led the 2021 drivers championship?")
 assert invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 AND round = 1", "Who won in 2021?")
 assert not invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 AND round = 1", "Who won round 1 of 2021?")
 assert not invented_values("SELECT * FROM f1_results r JOIN f1_races c ON r.round = c.round WHERE r.season = 2021", "Who won in 2021?")
+
+assert focus_lines("Tell me about the 2011 Monaco Grand Prix") == ["The 2011 Monaco Grand Prix "]
+assert focus_lines("Why did Max Verstappen not finish the 2021 British Grand Prix?") == [
+    "In the 2021 British Grand Prix, Max Verstappen ", "The 2021 British Grand Prix "]
+assert focus_lines("Describe Damon Hill's 1996 season") == []
 
 print("template checks passed")
