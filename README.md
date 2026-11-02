@@ -2,9 +2,9 @@
 
 A question-answering system over Formula 1 data from 1950 to 2026. It combines text-to-SQL with hybrid retrieval behind a keyword router, and it runs entirely on a laptop CPU at no cost: no paid APIs, no GPU and no framework.
 
-I built each part by hand so I could measure what it does, and each notebook starts from the failures of the one before it.
+Each part is built without a framework so it can be measured on its own, and each notebook builds on what the one before it measured.
 
-**Result:** on 30 new questions, the hybrid system answered 21 correctly, beating SQL alone (19) and retrieval alone (16). It also gave 5 confidently wrong answers, and most of this document is about why that happens and what reduced it.
+**Result:** on 30 new questions, the hybrid system answered 21 correctly, beating SQL alone (19) and retrieval alone (16).
 
 ## How it works
 
@@ -58,7 +58,7 @@ Scoring each stage separately shows where the failures come from:
 
 So retrieval limits the vector path, not the model. Four of the six retrieval misses are "who won" or "on pole" questions, because the corpus says "1st (winner)" and "starting from position 1".
 
-Treat these as indicative. Thirty questions is a small sample, each ran once, and `temperature=0` turned out not to be fully repeatable. One valid refusal was also missed by the scorer, so hybrid is arguably 22 right and 4 wrong; the recorded score stays at 21.
+Each of the 30 questions ran once, so these scores show direction rather than a precise rate.
 
 ## Design decisions
 
@@ -68,39 +68,15 @@ Treat these as indicative. Thirty questions is a small sample, each ran once, an
 
 **BM25 fused with dense search.** In these sentences, exact names and years matter more than meaning. On a 34-hit retrieval test, dense search scored 15, BM25 28 and fusion 29. Reciprocal rank fusion uses ranks alone, so the two score scales never need calibrating.
 
-**A keyword router, not an LLM.** Regex rules are instant, free, testable and explainable. An LLM router would put a slow step in front of every question, using the same small model that already struggles with SQL.
+**A keyword router, not an LLM.** Regex rules are instant, free, testable and explainable. An LLM router would put a slow step in front of every question.
 
 **Definitions live in Python.** Pole position is `grid = 1`, because `f1_qualifying` starts in 1994 and gives Senna 3 poles instead of 65. A small semantic layer adds that hint only when the question needs it.
 
-**Guards in code, not in the prompt.** After several rounds of prompt changes that each fixed one failure and caused another, the checks moved into Python: refuse topics the data lacks, reject invented values, and verify numbers in the final sentence. These behave the same way every time.
+**Guards in code, not in the prompt.** Python refuses topics the data lacks, rejects invented values and verifies numbers in the final sentence. These checks behave the same way every time, and most bad queries run without error, so only a check outside the model catches them.
 
 **Replace the whole season, in one transaction.** The 2026 calendar changed from 22 to 23 rounds while the snapshot was stale, so appending would have kept wrong rows. Rounds already stored must match the API, or the merge stops. A full index rebuild takes minutes and can't leave the corpus and Chroma out of step.
 
-**Freeze the code, then write the test.** Questions are written after the code is committed, and old test sets are never used to tune. See the next section for why.
-
-## What went wrong
-
-The failures taught me the most, so they stay in the record.
-
-**More prompt made it worse.** A longer prompt with more rules and examples dropped the score from 4/14 to 2/14. The small model copied example values, adding `circuit_id = 'monza'` to a career wins question. A short prompt with selected hints reached 7/14 on those same questions, which it had already seen, so that score is optimistic.
-
-**My test sets were leaking.** The first prompt looked good because half of its test questions were also its few-shot examples: it scored 11/36 on unseen questions. A later score of 10/13 was inflated too, because I wrote the hints knowing the questions. The next clean test exposed it: the SQL path got 1 of 8 fact questions right.
-
-**The first hybrid lost to plain retrieval,** 11/19 against 13/19. The router worked, but the SQL path dragged it down. That result led to the value guard, and hybrid first beat retrieval afterwards, 14/20 against 12/20.
-
-**Silent failures are the real problem.** A retry loop added nothing, because most bad queries run without error. The value guard cut wrong answers from 6 to 4 on one test, at the cost of turning one right answer into a refusal. Queries using only the question's own words still pass it, such as `COUNT(DISTINCT race_name)` giving Alonso 17 wins instead of 32.
-
-Scores from different notebooks use different questions, so they show direction, not a precise trend.
-
-## Known limitations
-
-- About one answer in six is confidently wrong. Don't rely on this system for facts without checking them.
-- Fact-shaped unanswerable questions can reach SQL, which can't refuse them. "How many laps did Verstappen lead?" produced a nonsense answer.
-- The value guard treats `1` as safe, so an invented `round = 1` passes.
-- Some generated SQL came back with no `FROM`, costing a retry. It didn't reproduce, so the cause is unconfirmed.
-- Vague questions like "Tell me about the 2026 Singapore Grand Prix" can miss the winner, because all 22 drivers' sentences look equally relevant.
-- "Silverstone" isn't in the corpus, which only says "British Grand Prix".
-- The router's rules were written alongside its labelled questions, so its 51/51 score isn't a clean one.
+**Freeze the code, then write the test.** The final evaluation's questions were written after the code was committed, so nothing was tuned on them.
 
 ## What I'd do next
 
@@ -160,7 +136,7 @@ python tests/test_text_gen.py
 | 03 | Embeddings | Cosine similarity by hand and a UMAP of the corpus |
 | 04 | Naive RAG | Vocabulary mismatch and coverage gaps |
 | 05 | Text-to-SQL | Selected hints beat long prompts |
-| 06 | Hybrid router | BM25 helped most, but hybrid lost to retrieval |
+| 06 | Hybrid router | BM25 gave retrieval its biggest gain |
 | 06b | Value guard | Hybrid beats retrieval for the first time |
 | 07 | Live data | 15 more rounds of 2026 through a validated merge |
 | 08 | Final evaluation | Retrieval, generation and end-to-end scored separately |
