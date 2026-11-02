@@ -42,6 +42,24 @@ number("How many times did Jean Alesi retire in 1995?", "SELECT COUNT(*) FROM f1
 number("How many points did Max Verstappen score?", "SELECT (SELECT SUM(points) FROM f1_results WHERE driver_id = 'max_verstappen') + (SELECT SUM(points) FROM f1_sprint_results WHERE driver_id = 'max_verstappen')")
 number("How many pit stops did Lewis Hamilton make in 2023?", "SELECT COUNT(*) FROM f1_pit_stops WHERE driver_id = 'hamilton' AND season = 2023")
 number("How many pit stops did Lewis Hamilton make at the 2023 Monaco Grand Prix?", "SELECT COUNT(*) FROM f1_pit_stops p JOIN f1_races r USING (season, round) WHERE p.driver_id = 'hamilton' AND p.season = 2023 AND r.race_name = 'Monaco Grand Prix'")
+LOTUS_WINS = "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE position = 1 AND constructor LIKE '%Lotus%'"
+CLASSIC_LOTUS = "(constructor = 'Team Lotus' OR constructor LIKE 'Lotus-%')"
+number("How many wins did Lotus have?", LOTUS_WINS)
+number("How many wins did Team Lotus have?", f"SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE position = 1 AND {CLASSIC_LOTUS}")
+number("How many wins did Lotus F1 have?", "SELECT COUNT(*) FROM f1_results WHERE position = 1 AND constructor = 'Lotus F1'")
+number("How many wins did Lotus-Climax have?", "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE position = 1 AND constructor = 'Lotus-Climax'")
+number("How many wins did Jim Clark have for Lotus?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'clark' AND position = 1 AND constructor LIKE '%Lotus%'")
+for team in ("Cooper", "Brabham", "McLaren", "BRM", "Matra"):
+    number(f"How many wins did {team} have?", f"SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE position = 1 AND split_part(constructor, '-', 1) = '{team}'")
+number("How many poles did Lotus have in the 1960s?", f"SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE grid = 1 AND season BETWEEN 1960 AND 1969 AND constructor LIKE '%Lotus%'")
+number("How many points did Lotus score in 1965?", "SELECT SUM(points) FROM f1_constructor_standings WHERE season = 1965 AND constructor LIKE '%Lotus%'")
+assert "three separate teams" in template_answer("How many wins did Lotus have?")["answer"]
+assert "three separate teams" not in template_answer("How many wins did Team Lotus have?")["answer"]
+assert "three separate teams" not in template_answer("How many wins did Lotus have in 1963?")["answer"]
+assert "Brabham-Repco 67, Brabham-Climax 2" in template_answer("How many points did Brabham score in 1967?")["answer"]
+assert "entries" not in template_answer("How many points did McLaren score in 2024?")["answer"]
+name("Which team has the most wins in the 1960s?", one("""SELECT CASE WHEN constructor LIKE '%Lotus%' THEN 'Team Lotus' ELSE split_part(constructor, '-', 1) END t
+    FROM f1_results WHERE position = 1 AND season BETWEEN 1960 AND 1969 GROUP BY 1 ORDER BY COUNT(DISTINCT season * 100 + round) DESC LIMIT 1"""))
 assert "isn't in the data" in template_answer("How many pit stops did Michael Schumacher make in 2004?")["answer"]
 assert " 0 " in template_answer("How many races did Lewis Hamilton not finish in 2017?")["answer"]
 number("How many sprint wins did Max Verstappen have in 2022?", "SELECT COUNT(*) FROM f1_sprint_results WHERE driver_id = 'max_verstappen' AND season = 2022 AND position = 1")

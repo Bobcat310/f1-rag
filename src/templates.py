@@ -53,6 +53,10 @@ def without(phrase: str, text: str) -> str:
     return f" {text} ".replace(f" {phrase} ", " ").strip()
 
 
+def quoted(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
 def load_drivers() -> dict:
     """Full names, plus a surname when it points to one driver or to the only winner with it."""
     rows = con.execute("SELECT driver_name, MAX(CASE WHEN position = 1 THEN 1 ELSE 0 END) FROM f1_results GROUP BY driver_name").fetchall()
@@ -69,7 +73,24 @@ def load_drivers() -> dict:
     return drivers
 
 
-CONSTRUCTORS = {plain(c): c for (c,) in con.execute("SELECT DISTINCT constructor FROM f1_results").fetchall()}
+def load_teams() -> dict:
+    """Every constructor name a team raced under. Early entries pair chassis and engine, as in Cooper-Climax."""
+    names = [c for (c,) in con.execute("SELECT DISTINCT constructor FROM f1_results").fetchall()]
+    families = {}
+    for name in names:
+        families.setdefault("Team Lotus" if name.startswith("Lotus-") else name.split("-")[0], []).append(name)
+    teams = {name: [name] for name in names}
+    teams.update({family: members for family, members in families.items() if len(members) > 1})
+    return teams
+
+
+TEAMS = load_teams()
+# Grouped for ranking. "Lotus" alone is added after this because it spans unrelated teams
+TEAM_COLUMN = "CASE " + " ".join(f"WHEN constructor IN ({', '.join(quoted(n) for n in members)}) THEN {quoted(team)}"
+                                 for team, members in TEAMS.items() if len(members) > 1) + " ELSE constructor END"
+TEAMS["Lotus"] = [name for name in TEAMS if "Lotus" in name and name != "Lotus"] + ["Lotus"]
+LOTUS_NOTE = " That covers three separate teams: Team Lotus (1958-1994), the 2010-2011 Lotus team, and Lotus F1 (2012-2015)."
+CONSTRUCTORS = {plain(team): team for team in TEAMS}
 # McLaren alone means the team, so a surname can't shadow a constructor
 DRIVERS = {key: name for key, name in load_drivers().items() if key not in CONSTRUCTORS or " " in key}
 
@@ -101,10 +122,6 @@ def season_running(season: int) -> bool:
     raced, planned = con.execute("""SELECT (SELECT MAX(round) FROM f1_results WHERE season = ?),
                                            (SELECT MAX(round) FROM f1_races WHERE season = ?)""", [season, season]).fetchone()
     return raced is not None and raced < planned
-
-
-def quoted(value: str) -> str:
-    return "'" + value.replace("'", "''") + "'"
 
 
 def join_names(names: list) -> str:
@@ -170,7 +187,7 @@ def count_answer(text: str) -> dict:
     if driver:
         filters.append(f"driver_name = {quoted(driver)}")
     if team:
-        filters.append(f"constructor = {quoted(team)}")
+        filters.append(team_filter(team))
     if period:
         filters.append(period)
     where = " AND ".join(filters)
@@ -194,7 +211,13 @@ def count_answer(text: str) -> dict:
         return None
     subject = " for ".join(name for name in (driver, team) if name)
     label = f"{'sprint ' if sprint else ''}{one if value == 1 else many}"
-    return {"answer": f"{subject} had {value:g} {label}{when}.", "sql": sql}
+    note = LOTUS_NOTE if team == "Lotus" and not driver and not period else ""
+    if sql.startswith("SELECT SUM(points) FROM f1_constructor_standings"):
+        entries = con.execute(f"""SELECT constructor, points FROM f1_constructor_standings
+                                  WHERE {period} AND {team_filter(team)} AND points > 0 ORDER BY points DESC""").fetchall()
+        if len(entries) > 1:  # each chassis and engine pair had its own place in the table
+            note = " That adds its entries: " + ", ".join(f"{entry} {points:g}" for entry, points in entries) + "."
+    return {"answer": f"{subject} had {value:g} {label}{when}.{note}", "sql": sql}
 
 
 def most_answer(text: str) -> dict:
@@ -205,8 +228,9 @@ def most_answer(text: str) -> dict:
     period, when, rest = period_filter(text)
     if set(rest.split()) - MOST_FILLER:
         return None
-    column = "constructor" if re.search(r"\b(team|constructor)\b", text) else "driver_name"
-    total = "COUNT(DISTINCT season * 100 + round)" if column == "constructor" and "= 1" in condition else "COUNT(*)"
+    by_team = re.search(r"\b(team|constructor)\b", text) is not None
+    column = TEAM_COLUMN if by_team else "driver_name"
+    total = "COUNT(DISTINCT season * 100 + round)" if by_team and "= 1" in condition else "COUNT(*)"
     where = f"{period} AND {condition}" if period else condition
     sql = f"SELECT {column}, {total} AS n FROM f1_results WHERE {where} GROUP BY 1 ORDER BY n DESC LIMIT 2"
     rows = con.execute(sql).fetchall()
@@ -238,12 +262,16 @@ def pit_answer(text: str) -> dict:
     return {"answer": f"{driver} made {value} pit stop{'' if value == 1 else 's'} in {place}.", "sql": sql}
 
 
+def team_filter(team: str) -> str:
+    return f"constructor IN ({', '.join(quoted(name) for name in TEAMS[team])})"
+
+
 def standings_points_sql(driver, team, period) -> str:
     """Race rows miss sprint points and old dropped scores, so a single season uses the standings."""
     if period is None or "BETWEEN" in period or (driver and team):
         return None
     if team:
-        return f"SELECT points FROM f1_constructor_standings WHERE {period} AND constructor = {quoted(team)}"
+        return f"SELECT SUM(points) FROM f1_constructor_standings WHERE {period} AND {team_filter(team)}"
     return f"""SELECT s.points FROM f1_driver_standings s JOIN f1_drivers d USING (driver_id)
                WHERE s.{period} AND d.given_name || ' ' || d.family_name = {quoted(driver)}"""
 
