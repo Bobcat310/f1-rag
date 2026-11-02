@@ -4,6 +4,7 @@ import re
 import pandas as pd
 
 from src.retriever import fused_search, sentences
+from src.templates import template_answer
 from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, client, run_sql, sql_answer
 
 
@@ -66,6 +67,9 @@ def ask(question: str) -> dict:
     path = route(question)
     if path == "refuse":
         return {"path": path, "answer": "That isn't in the data.", "sql": None, "sources": []}
+    fixed = template_answer(question)
+    if fixed:
+        return {"path": "template", "answer": fixed["answer"], "sql": fixed["sql"], "sources": []}
     if path == "sql":
         run = run_sql(question)
         if usable(run):

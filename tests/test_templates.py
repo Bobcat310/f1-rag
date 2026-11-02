@@ -1,0 +1,71 @@
+"""Checks templates against separately written SQL. Run: python tests/test_templates.py"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from src.templates import template_answer
+from src.text_to_sql import con, invented_values, NOT_IN_DATA
+
+
+def one(sql: str):
+    return con.execute(sql).fetchone()[0]
+
+
+def number(question: str, truth_sql: str):
+    answer = template_answer(question)
+    assert answer, f"no template for: {question}"
+    expected = f"{one(truth_sql):g}"
+    assert f" {expected} " in answer["answer"], f"{question}: {answer['answer']} != {expected}"
+
+
+def name(question: str, expected: str):
+    answer = template_answer(question)
+    assert answer, f"no template for: {question}"
+    assert expected in answer["answer"], f"{question}: {answer['answer']}"
+
+
+def declined(question: str):
+    assert template_answer(question) is None, f"should go to the model: {question}"
+
+
+number("How many races did Fernando Alonso win?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'alonso' AND position = 1")
+number("How many wins did Hamilton have in 2020?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'hamilton' AND season = 2020 AND position = 1")
+number("How many pole positions did Ayrton Senna take?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'senna' AND grid = 1")
+number("How many podiums did Kimi Raikkonen score?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'raikkonen' AND position <= 3")
+number("How many wins did Ferrari have in the 2000s?", "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor = 'Ferrari' AND season BETWEEN 2000 AND 2009 AND position = 1")
+number("How many wins did Hamilton have for McLaren?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'hamilton' AND constructor = 'McLaren' AND position = 1")
+number("How many points did Max Verstappen score in 2021?", "SELECT s.points FROM f1_driver_standings s WHERE s.season = 2021 AND s.driver_id = 'max_verstappen'")
+number("How many points did McLaren score in 2024?", "SELECT points FROM f1_constructor_standings WHERE season = 2024 AND constructor = 'McLaren'")
+assert " 0 " in template_answer("How many races did Lewis Hamilton not finish in 2017?")["answer"]
+
+name("Who won the 2003 Canadian Grand Prix?", "Michael Schumacher")
+name("Who won the 2021 Abu Dhabi GP?", "Max Verstappen")
+name("Who won the 2019 race at Monza?", "Charles Leclerc")
+name("Which team won the 2021 Monaco Grand Prix?", "Red Bull")
+name("Who started on pole at the 2017 Hungarian Grand Prix?", "Sebastian Vettel")
+name("Who won the 1951 Indianapolis 500?", "Lee Wallard")
+name("Who won the 2021 drivers championship?", "Max Verstappen")
+name("Which team won the 2011 constructors championship?", "Red Bull")
+name("Who was world champion in 1988?", "Ayrton Senna")
+
+declined("How many wins did Schumacher have?")          # Michael and Ralf both won races
+declined("How many wins did Hamilton have at Monza?")   # a word the template can't use
+declined("How many wins did Hamilton have from pole?")
+declined("How many consecutive wins did Vettel have in 2013?")
+declined("How many championships did Hamilton win?")
+declined("How many wins did Lewis Hamilton have in 1990?")  # never raced then
+declined("Who finished second in the 2021 Abu Dhabi Grand Prix?")
+declined("Who finished second in the 2021 drivers championship?")
+declined("Who won the British Grand Prix?")             # no season
+declined("Who won the 2026 drivers championship?")      # season still running
+declined("Who won the 2020 race at Silverstone?")       # two races there that year
+
+assert NOT_IN_DATA.search("How many laps did Max Verstappen lead in 2023?")
+assert NOT_IN_DATA.search("Who is the race engineer of Lewis Hamilton?")
+assert not NOT_IN_DATA.search("Who led the 2021 drivers championship?")
+assert invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 AND round = 1", "Who won in 2021?")
+assert not invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 AND round = 1", "Who won round 1 of 2021?")
+assert not invented_values("SELECT * FROM f1_results r JOIN f1_races c ON r.round = c.round WHERE r.season = 2021", "Who won in 2021?")
+
+print("template checks passed")
