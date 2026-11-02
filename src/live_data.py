@@ -187,11 +187,9 @@ def rebuild_index(sentences: list, batch_size: int = 500) -> int:
     from sentence_transformers import SentenceTransformer
 
     model = SentenceTransformer("all-MiniLM-L6-v2")
+    # delete_collection leaves the old vectors on disk, so every rebuild would add another copy
+    shutil.rmtree(PROJECT_ROOT / "chroma_db", ignore_errors=True)
     client = chromadb.PersistentClient(path=str(PROJECT_ROOT / "chroma_db"))
-    try:
-        client.delete_collection("f1_corpus")
-    except Exception:
-        pass  # nothing to delete on a first build
     collection = client.create_collection(name="f1_corpus", metadata={"hnsw:space": "cosine"})
     for i in range(0, len(sentences), batch_size):
         batch = sentences[i:i + batch_size]
