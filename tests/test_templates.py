@@ -93,6 +93,8 @@ assert not invented_values("SELECT * FROM f1_results r JOIN f1_races c ON r.roun
 assert focus_lines("Tell me about the 2011 Monaco Grand Prix") == ["The 2011 Monaco Grand Prix "]
 assert focus_lines("Why did Max Verstappen not finish the 2021 British Grand Prix?") == [
     "In the 2021 British Grand Prix, Max Verstappen ", "The 2021 British Grand Prix "]
-assert focus_lines("Describe Damon Hill's 1996 season") == []
+assert focus_lines("Describe Damon Hill's 1996 season") == ["At the end of the 1996 season, Damon Hill "]
+assert focus_lines("Describe Lando Norris's 2026 season") == ["After round 18 of the 2026 season, Lando Norris "]
+assert focus_lines("Which races were held in 1996?") == []
 
 print("template checks passed")

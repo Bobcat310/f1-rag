@@ -256,9 +256,13 @@ def focus_lines(question: str) -> list:
         return []
     year = int(season.group(1))
     round_no, race_name, rest = find_race(text.replace(season.group(0), ""), year)
-    if round_no is None:
-        return []
     driver, _ = find_name(rest, DRIVERS)
+    if round_no is None:
+        if driver is None:
+            return []
+        last_round = con.execute("SELECT MAX(round) FROM f1_results WHERE season = ?", [year]).fetchone()[0]
+        when = f"After round {last_round} of" if season_running(year) else "At the end of"
+        return [f"{when} the {year} season, {driver} "]
     summary = f"The {year} {race_name} "
     return [f"In the {year} {race_name}, {driver} ", summary] if driver else [summary]
 
