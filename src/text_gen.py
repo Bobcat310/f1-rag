@@ -82,12 +82,32 @@ def constructor_standing_to_text(row, after_round=None):
     )
 
 
+def join_names(names: list) -> str:
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}"
+
+
+def race_summary_to_text(season, race_name, rows) -> str:
+    """One sentence for a whole race, so a question about it doesn't compete with every car's result."""
+    winners = [f"{r['driver_name']} for {r['constructor']}" for _, r in rows[rows['position'] == 1].iterrows()]
+    poles = list(rows[rows['grid'] == 1]['driver_name'])
+    podium = list(rows[rows['position'] <= 3].sort_values('position')['driver_name'])
+
+    text = f"The {season} {race_name} was won by {join_names(winners)}"
+    if poles:
+        text += f", with {join_names(poles)} on pole position"
+    return f"{text}, and the podium was {join_names(podium)}."
+
+
 def build_corpus(con, live_rounds=None) -> list:
     """All sentences in corpus order. live_rounds maps a running season to its latest round."""
     live_rounds = live_rounds or {}
-    sentences = [result_to_text(row) for _, row in con.execute("SELECT * FROM f1_results").df().iterrows()]
+    results = con.execute("SELECT * FROM f1_results").df()
+    sentences = [result_to_text(row) for _, row in results.iterrows()]
     for _, row in con.execute("SELECT * FROM f1_driver_standings").df().iterrows():
         sentences.append(standing_to_text(row, live_rounds.get(row['season'])))
     for _, row in con.execute("SELECT * FROM f1_constructor_standings").df().iterrows():
         sentences.append(constructor_standing_to_text(row, live_rounds.get(row['season'])))
+    for (season, _, race_name), rows in results.groupby(['season', 'round', 'race_name']):
+        if (rows['position'] == 1).any():
+            sentences.append(race_summary_to_text(season, race_name, rows))
     return [s for s in sentences if s is not None]
