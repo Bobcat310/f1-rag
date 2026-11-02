@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.retriever import fused_search, sentences
 from src.templates import focus_lines, template_answer
-from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, asks_for_missing_field, client, run_sql, sql_answer
+from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, asks_for_missing_field, client, numbers_in, run_sql, sql_answer
 
 
 NARRATIVE = re.compile(r"^\s*(tell me|describe|explain|why|how did|how was|compare|summari[sz]e|what happened)", re.IGNORECASE)
@@ -28,6 +28,7 @@ def answer_from_context(question: str, found: list) -> str:
     context = "\n".join(f"- {sentence}" for sentence in found)
     prompt = f"""Answer the question in one or two sentences using ONLY the context below.
 Never guess or infer beyond the context. If the context does not state the answer, reply exactly: Not in the context.
+Report only facts stated in the context. Do not judge how good a result was, and do not count things yourself.
 
 Context:
 {context}
@@ -39,7 +40,11 @@ Answer:"""
         messages=[{"role": "user", "content": prompt}],
         options=LLM_OPTIONS,
     )
-    return response["message"]["content"].strip()
+    answer = response["message"]["content"].strip()
+    # same check as the SQL path: a number the context lacks means the model made it up
+    if not numbers_in(answer) <= numbers_in(context) | numbers_in(question):
+        return found[0]
+    return answer
 
 
 def find_context(question: str, k: int = 5) -> list:
