@@ -31,7 +31,7 @@ SHARED_FILLER = set("""the a an of in at did does do has have had his her their 
     race races grand prix gp formula one f1""".split())
 RACE_FILLER = SHARED_FILLER | set("""who which what driver team constructor won win winner finished first came took
     victory started start starting pole position qualified claimed got sat""".split())
-COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all time times grands win wins won victory victories
+COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all time times grands sprint sprints win wins won victory victories
     pole poles position positions podium podiums finish finishes finished not fail failed retire retired
     retirement retirements dnf dnfs points score scored take took get got claim claimed achieve achieved
     earn earned start started secure secured""".split())
@@ -174,28 +174,33 @@ def count_answer(text: str) -> dict:
     if period:
         filters.append(period)
     where = " AND ".join(filters)
-    if con.execute(f"SELECT COUNT(*) FROM f1_results WHERE {where}").fetchone()[0] == 0:
+    sprint = bool(re.search(r"\bsprints?\b", text))
+    table = "f1_sprint_results" if sprint else "f1_results"
+    if con.execute(f"SELECT COUNT(*) FROM {table} WHERE {where}").fetchone()[0] == 0:
         return None  # never raced then, so 0 would mislead
 
-    if condition is None:
+    if condition is None and sprint:
+        sql = f"SELECT SUM(points) FROM {table} WHERE {where}"
+    elif condition is None:
         sql = standings_points_sql(driver, team, period) or (f"""SELECT (SELECT COALESCE(SUM(points), 0) FROM f1_results WHERE {where})
                                                                     + (SELECT COALESCE(SUM(points), 0) FROM f1_sprint_results WHERE {where})""")
     elif team and not driver and condition in ("position = 1", "grid = 1"):
         # a shared drive puts two of a team's cars on one result
-        sql = f"SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE {where} AND {condition}"
+        sql = f"SELECT COUNT(DISTINCT season * 100 + round) FROM {table} WHERE {where} AND {condition}"
     else:
-        sql = f"SELECT COUNT(*) FROM f1_results WHERE {where} AND {condition}"
+        sql = f"SELECT COUNT(*) FROM {table} WHERE {where} AND {condition}"
     value = con.execute(sql).fetchone()[0]
     if value is None:
         return None
     subject = " for ".join(name for name in (driver, team) if name)
-    return {"answer": f"{subject} had {value:g} {one if value == 1 else many}{when}.", "sql": sql}
+    label = f"{'sprint ' if sprint else ''}{one if value == 1 else many}"
+    return {"answer": f"{subject} had {value:g} {label}{when}.", "sql": sql}
 
 
 def most_answer(text: str) -> dict:
     matched = [m for m in METRICS if re.search(m[0], text)]
-    if len(matched) != 1 or matched[0][1] is None:
-        return None  # season points need the standings, so that stays with the model
+    if len(matched) != 1 or matched[0][1] is None or re.search(r"\bsprints?\b", text):
+        return None  # season points need the standings, and this only ranks grand prix results
     _, condition, _, many = matched[0]
     period, when, rest = period_filter(text)
     if set(rest.split()) - MOST_FILLER:

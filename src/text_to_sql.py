@@ -56,7 +56,7 @@ NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|la
 
 # SQL can only answer for things the tables hold, so these list what they hold
 HOW_MANY = re.compile(r"\bhow many (\w+)", re.IGNORECASE)
-COUNTABLE = set("""race races grand grands win wins victory victories pole poles podium podiums point points driver drivers
+COUNTABLE = set("""race races grand grands sprint sprints win wins victory victories pole poles podium podiums point points driver drivers
     constructor constructors team teams time times season seasons title titles championship championships lap laps pit
     stop stops round rounds circuit circuits country countries different distinct consecutive fastest start starts
     retirement retirements dnf dnfs finish finishes""".split())

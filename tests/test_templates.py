@@ -44,6 +44,11 @@ number("How many pit stops did Lewis Hamilton make in 2023?", "SELECT COUNT(*) F
 number("How many pit stops did Lewis Hamilton make at the 2023 Monaco Grand Prix?", "SELECT COUNT(*) FROM f1_pit_stops p JOIN f1_races r USING (season, round) WHERE p.driver_id = 'hamilton' AND p.season = 2023 AND r.race_name = 'Monaco Grand Prix'")
 assert "isn't in the data" in template_answer("How many pit stops did Michael Schumacher make in 2004?")["answer"]
 assert " 0 " in template_answer("How many races did Lewis Hamilton not finish in 2017?")["answer"]
+number("How many sprint wins did Max Verstappen have in 2022?", "SELECT COUNT(*) FROM f1_sprint_results WHERE driver_id = 'max_verstappen' AND season = 2022 AND position = 1")
+number("How many sprint points did McLaren score in 2024?", "SELECT SUM(points) FROM f1_sprint_results WHERE constructor = 'McLaren' AND season = 2024")
+declined("How many sprint wins did Max Verstappen have in 2019?")  # no sprints before 2021
+declined("Who has the most sprint wins?")
+assert not asks_for_missing_field("How many sprint wins did Lando Norris have?")
 
 name("Who won the 2003 Canadian Grand Prix?", "Michael Schumacher")
 name("Who won the 2021 Abu Dhabi GP?", "Max Verstappen")
