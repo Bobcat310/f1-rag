@@ -48,7 +48,9 @@ HINTS = [
 ]
 
 # The dataset has none of this, so Python refuses without asking the model.
-NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|pit stops?|lap times?|favou?rite|popular|opinions?)\b", re.IGNORECASE)
+NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|pit stops?|lap times?|favou?rite|popular|opinions?"
+                         r"|engineers?|sponsors?|salary|salaries|contracts?|budgets?|attendance|penalt(y|ies)|overtak(es?|ing))\b"
+                         r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b", re.IGNORECASE)
 
 
 def build_prompt(question: str):
@@ -153,6 +155,9 @@ def invented_values(sql: str, question: str) -> list:
     for number in re.findall(r"(?<![\w.])\d+(?![\w.])", bare_sql):
         if int(number) not in allowed_numbers:
             invented.append(number)
+    # 1 is a safe number for wins and poles, but a round filter needs asking for
+    if "round" not in asked:
+        invented += re.findall(r"\bround\s*=\s*\d+", bare_sql, flags=re.IGNORECASE)
     return invented
 
 
