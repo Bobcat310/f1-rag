@@ -57,7 +57,7 @@ Templates answered 14 of the 30 without the model. One gained question asks abou
 
 Scoring retrieval separately, the answer sentence reached the top 5 for 7 of 9 questions, up from 6 of 9. On the earlier frozen set it rose from 9 of 12 to 11 of 12.
 
-The questions were written by the system's author and each ran once, so these scores show direction rather than a precise rate.
+Scoring checks that each answer contains the expected fact. The questions were written by the system's author and each ran once, so these scores show direction rather than a precise rate.
 
 ## Design decisions
 
