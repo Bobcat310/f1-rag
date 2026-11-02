@@ -13,10 +13,19 @@ result = {"season": 2021, "race_name": "Abu Dhabi Grand Prix", "driver_name": "M
 assert result_to_text(result) == ("In the 2021 Abu Dhabi Grand Prix, Max Verstappen finished 1st (winner) "
                                   "starting from position 1, scoring 25.0 points for Red Bull.")
 
-driver = {"season": 2026, "position": 2, "points": 63.0, "wins": 1, "driver_id": "russell", "constructor": "Mercedes"}
-assert standing_to_text(driver) == ("At the end of the 2026 season, russell was 2nd in the drivers championship "
-                                    "with 63.0 points and 1 wins, driving for Mercedes.")
-assert standing_to_text(driver, after_round=18).startswith("After round 18 of the 2026 season, russell was 2nd")
+crash = {**result, "position": 20, "status": "Collision", "points": 0.0}
+assert result_to_text(crash) == ("In the 2021 Abu Dhabi Grand Prix, Max Verstappen retired (Collision), grid position 1, "
+                                 "scoring 0.0 points for Red Bull.")
+assert "retired (Out of fuel) but was classified 6th" in result_to_text({**crash, "position": 6, "status": "Out of fuel", "points": 8.0})
+assert "was disqualified" in result_to_text({**crash, "status": "Disqualified"})
+assert "finished 22nd" in result_to_text({**result, "position": 22, "status": "+1 Lap"})
+assert "finished 13th" in result_to_text({**result, "position": 13, "status": "Lapped"})
+
+driver = {"season": 2026, "position": 2, "points": 63.0, "wins": 1, "driver_id": "russell",
+          "driver_name": "George Russell", "constructor": "Mercedes"}
+assert standing_to_text(driver) == ("At the end of the 2026 season, George Russell was 2nd in the drivers championship "
+                                    "with 63.0 points and 1 win, driving for Mercedes.")
+assert standing_to_text(driver, after_round=18).startswith("After round 18 of the 2026 season, George Russell was 2nd")
 assert standing_to_text({**driver, "position": None}) is None
 
 team = {"season": 2026, "position": 1, "points": 100.0, "wins": 3, "constructor": "Mercedes"}
@@ -32,6 +41,9 @@ race = pd.DataFrame([
 assert race_summary_to_text(2025, "Dutch Grand Prix", race) == (
     "The 2025 Dutch Grand Prix was won by Max Verstappen for Red Bull, with Lando Norris on pole position, "
     "and the podium was Max Verstappen, Lando Norris and Oscar Piastri.")
+
+assert race_summary_to_text(2025, "Dutch Grand Prix", race, "Circuit Zandvoort in Zandvoort").startswith(
+    "The 2025 Dutch Grand Prix at Circuit Zandvoort in Zandvoort was won by")
 
 shared = race.assign(position=[1, 1, 2, 3], grid=[2, 3, 4, 5])
 text = race_summary_to_text(1956, "Argentine Grand Prix", shared)

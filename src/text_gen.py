@@ -2,30 +2,33 @@
 import pandas as pd
 
 
+# Every row has a position, even a retirement, so status decides what happened
+NOT_RETIRED = {"Disqualified": "was disqualified", "Excluded": "was excluded", "Withdrew": "withdrew",
+               "Did not start": "did not start", "Not classified": "was not classified"}
+
+
+def ordinal(pos: int) -> str:
+    suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(pos % 10, 'th') if pos % 100 not in (11, 12, 13) else 'th'
+    return f"{pos}{suffix}"
+
+
+def finished_race(status: str) -> bool:
+    return status in ("Finished", "Lapped") or status.startswith("+")
+
+
+def outcome_text(row) -> str:
+    pos_int = int(float(row['position']))
+    grid_int = int(float(row['grid']))
+    if finished_race(row['status']):
+        place = "1st (winner)" if pos_int == 1 else ordinal(pos_int)
+        return f"finished {place} starting from position {grid_int}"
+    outcome = NOT_RETIRED.get(row['status'], f"retired ({row['status']})")
+    # a car stopping near the end can still be classified and score
+    classified = f" but was classified {ordinal(pos_int)}" if row['points'] > 0 else ""
+    return f"{outcome}{classified}, grid position {grid_int}"
+
+
 def result_to_text(row):
-    position = row['position']
-    grid = row['grid']
-
-    # Handle DNFs
-    try:
-        pos_int = int(float(position))
-        if pos_int == 1:
-            pos_str = "1st (winner)"
-        elif pos_int == 2:
-            pos_str = "2nd"
-        elif pos_int == 3:
-            pos_str = "3rd"
-        else:
-            pos_str = f"{pos_int}th"
-    except (TypeError, ValueError):
-        pos_str = f"retired ({row['status']})"
-
-    # Handle grid position
-    try:
-        grid_int = int(float(grid))
-        grid_str = f"starting from position {grid_int}"
-    except (TypeError, ValueError):
-        grid_str = "from an unknown grid position"
 
     # Fastest lap note
     fastest = ""
@@ -37,14 +40,13 @@ def result_to_text(row):
 
     return (
         f"In the {row['season']} {row['race_name']}, "
-        f"{row['driver_name']} finished {pos_str} {grid_str}, "
+        f"{row['driver_name']} {outcome_text(row)}, "
         f"scoring {row['points']} points for {row['constructor']}{fastest}."
     )
 
 
-def ordinal(pos: int) -> str:
-    suffix = 'st' if pos == 1 else 'nd' if pos == 2 else 'rd' if pos == 3 else 'th'
-    return f"{pos}{suffix}"
+def plural_wins(count) -> str:
+    return "1 win" if count == 1 else f"{count} wins"
 
 
 def standing_to_text(row, after_round=None):
@@ -58,8 +60,8 @@ def standing_to_text(row, after_round=None):
             else f"At the end of the {row['season']} season")
 
     return (
-        f"{when}, {row['driver_id']} {pos_str} the drivers championship "
-        f"with {row['points']} points and {row['wins']} wins, "
+        f"{when}, {row['driver_name']} {pos_str} the drivers championship "
+        f"with {row['points']} points and {plural_wins(row['wins'])}, "
         f"driving for {row['constructor']}."
     )
 
@@ -73,12 +75,12 @@ def constructor_standing_to_text(row, after_round=None):
         return (
             f"After round {after_round} of the {row['season']} constructors championship, "
             f"{row['constructor']} was {ordinal(pos)} "
-            f"with {row['points']} points and {row['wins']} wins."
+            f"with {row['points']} points and {plural_wins(row['wins'])}."
         )
     return (
         f"In the {row['season']} constructors championship, "
         f"{row['constructor']} finished {ordinal(pos)} "
-        f"with {row['points']} points and {row['wins']} wins."
+        f"with {row['points']} points and {plural_wins(row['wins'])}."
     )
 
 
@@ -86,13 +88,14 @@ def join_names(names: list) -> str:
     return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}"
 
 
-def race_summary_to_text(season, race_name, rows) -> str:
+def race_summary_to_text(season, race_name, rows, venue=None) -> str:
     """One sentence for a whole race, so a question about it doesn't compete with every car's result."""
     winners = [f"{r['driver_name']} for {r['constructor']}" for _, r in rows[rows['position'] == 1].iterrows()]
     poles = list(rows[rows['grid'] == 1]['driver_name'])
     podium = list(rows[rows['position'] <= 3].sort_values('position')['driver_name'])
 
-    text = f"The {season} {race_name} was won by {join_names(winners)}"
+    where = f" at {venue}" if venue else ""
+    text = f"The {season} {race_name}{where} was won by {join_names(winners)}"
     if poles:
         text += f", with {join_names(poles)} on pole position"
     return f"{text}, and the podium was {join_names(podium)}."
@@ -103,11 +106,15 @@ def build_corpus(con, live_rounds=None) -> list:
     live_rounds = live_rounds or {}
     results = con.execute("SELECT * FROM f1_results").df()
     sentences = [result_to_text(row) for _, row in results.iterrows()]
-    for _, row in con.execute("SELECT * FROM f1_driver_standings").df().iterrows():
+    drivers = con.execute("""SELECT s.*, COALESCE(d.given_name || ' ' || d.family_name, s.driver_id) AS driver_name
+                             FROM f1_driver_standings s LEFT JOIN f1_drivers d USING (driver_id)""").df()
+    for _, row in drivers.iterrows():
         sentences.append(standing_to_text(row, live_rounds.get(row['season'])))
     for _, row in con.execute("SELECT * FROM f1_constructor_standings").df().iterrows():
         sentences.append(constructor_standing_to_text(row, live_rounds.get(row['season'])))
-    for (season, _, race_name), rows in results.groupby(['season', 'round', 'race_name']):
+    venues = {(season, round_no): f"{circuit} in {town}" for season, round_no, circuit, town in con.execute(
+        "SELECT r.season, r.round, c.circuit_name, c.locality FROM f1_races r JOIN f1_circuits c USING (circuit_id)").fetchall()}
+    for (season, round_no, race_name), rows in results.groupby(['season', 'round', 'race_name']):
         if (rows['position'] == 1).any():
-            sentences.append(race_summary_to_text(season, race_name, rows))
+            sentences.append(race_summary_to_text(season, race_name, rows, venues.get((season, round_no))))
     return [s for s in sentences if s is not None]
