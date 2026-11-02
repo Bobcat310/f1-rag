@@ -62,7 +62,8 @@ HINTS = [
 
 # The dataset has none of this, so Python refuses without asking the model.
 NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|lap times?|favou?rite|popular|opinions?"
-                         r"|engineers?|sponsors?|salary|salaries|contracts?|budgets?|attendance|penalt(y|ies)|overtak(es?|ing))\b"
+                         r"|engineers?|sponsors?|salary|salaries|contracts?|budgets?|attendance|penalt(y|ies)|overtak(es?|ing)"
+                         r"|design(s|ed|er|ers)?|owns|owned|owners?)\b"
                          r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b", re.IGNORECASE)
 
 # SQL can only answer for things the tables hold, so these list what they hold
