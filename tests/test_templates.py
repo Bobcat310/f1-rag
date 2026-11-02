@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.templates import focus_lines, template_answer
-from src.text_to_sql import asks_for_missing_field, con, invented_values, NOT_IN_DATA
+from src.text_to_sql import asks_for_missing_field, build_prompt, con, invented_values, NOT_IN_DATA
 
 
 def one(sql: str):
@@ -108,11 +108,22 @@ assert invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 A
 assert not invented_values("SELECT driver_name FROM f1_results WHERE season = 2021 AND round = 1", "Who won round 1 of 2021?")
 assert not invented_values("SELECT * FROM f1_results r JOIN f1_races c ON r.round = c.round WHERE r.season = 2021", "Who won in 2021?")
 
+assert not invented_values("SELECT COUNT(*) FROM f1_results WHERE constructor LIKE '%Brabham%' AND grid = 1 AND position = 1", "How many wins from pole did Brabham have?")
+for question, note in (("How many wins from pole did Brabham have?", "LIKE '%Name%'"), ("How many wins do British drivers have?", "f1_drivers"),
+                       ("How many laps did Senna complete?", "laps column"), ("What was the average pit stop time in 2022?", "duration <= 120")):
+    assert note in build_prompt(question), question
+assert "nationality" not in build_prompt("Who won the 2003 British Grand Prix?")
+
 assert focus_lines("Tell me about the 2011 Monaco Grand Prix") == ["The 2011 Monaco Grand Prix "]
 assert focus_lines("Why did Max Verstappen not finish the 2021 British Grand Prix?") == [
     "In the 2021 British Grand Prix, Max Verstappen ", "The 2021 British Grand Prix "]
 assert focus_lines("Describe Damon Hill's 1996 season") == ["At the end of the 1996 season, Damon Hill "]
 assert focus_lines("Describe Lando Norris's 2026 season") == ["After round 18 of the 2026 season, Lando Norris "]
 assert focus_lines("Which races were held in 1996?") == []
+assert focus_lines("Tell me about Lewis Hamilton") == ["Lewis Hamilton raced in Formula 1 "]
+assert focus_lines("Compare Ayrton Senna and Alain Prost") == ["Ayrton Senna raced in Formula 1 ", "Alain Prost raced in Formula 1 "]
+assert focus_lines("Tell me about Brabham-Repco") == ["Brabham-Repco raced in Formula 1 "]
+assert set(focus_lines("Tell me about Lotus")) == {"Lotus raced in Formula 1 ", "Team Lotus raced in Formula 1 ", "Lotus F1 raced in Formula 1 "}
+assert focus_lines("Who won the British Grand Prix?") == []
 
 print("template checks passed")

@@ -6,6 +6,7 @@ recognise returns None, so the question goes to the model instead of being misre
 """
 import re
 
+from src.text_gen import number, team_families
 from src.text_to_sql import con, words
 
 SEASON = re.compile(r"\b(19[5-9]\d|20[0-2]\d)\b")
@@ -73,18 +74,7 @@ def load_drivers() -> dict:
     return drivers
 
 
-def load_teams() -> dict:
-    """Every constructor name a team raced under. Early entries pair chassis and engine, as in Cooper-Climax."""
-    names = [c for (c,) in con.execute("SELECT DISTINCT constructor FROM f1_results").fetchall()]
-    families = {}
-    for name in names:
-        families.setdefault("Team Lotus" if name.startswith("Lotus-") else name.split("-")[0], []).append(name)
-    teams = {name: [name] for name in names}
-    teams.update({family: members for family, members in families.items() if len(members) > 1})
-    return teams
-
-
-TEAMS = load_teams()
+TEAMS = team_families([c for (c,) in con.execute("SELECT DISTINCT constructor FROM f1_results").fetchall()])
 # Grouped for ranking. "Lotus" alone is added after this because it spans unrelated teams
 TEAM_COLUMN = "CASE " + " ".join(f"WHEN constructor IN ({', '.join(quoted(n) for n in members)}) THEN {quoted(team)}"
                                  for team, members in TEAMS.items() if len(members) > 1) + " ELSE constructor END"
@@ -216,8 +206,8 @@ def count_answer(text: str) -> dict:
         entries = con.execute(f"""SELECT constructor, points FROM f1_constructor_standings
                                   WHERE {period} AND {team_filter(team)} AND points > 0 ORDER BY points DESC""").fetchall()
         if len(entries) > 1:  # each chassis and engine pair had its own place in the table
-            note = " That adds its entries: " + ", ".join(f"{entry} {points:g}" for entry, points in entries) + "."
-    return {"answer": f"{subject} had {value:g} {label}{when}.{note}", "sql": sql}
+            note = " That adds its entries: " + ", ".join(f"{entry} {number(points)}" for entry, points in entries) + "."
+    return {"answer": f"{subject} had {number(value)} {label}{when}.{note}", "sql": sql}
 
 
 def most_answer(text: str) -> dict:
@@ -276,12 +266,25 @@ def standings_points_sql(driver, team, period) -> str:
                WHERE s.{period} AND d.given_name || ' ' || d.family_name = {quoted(driver)}"""
 
 
+def career_lines(text: str) -> list:
+    """Each named driver and team, so a comparison gets both overviews."""
+    subjects = []
+    for names in (DRIVERS, CONSTRUCTORS):
+        subject, text = find_name(text, names)
+        while subject:
+            subjects.append(subject)
+            subject, text = find_name(text, names)
+    if "Lotus" in subjects:
+        subjects += ["Team Lotus", "Lotus F1"]
+    return [f"{subject} raced in Formula 1 " for subject in subjects]
+
+
 def focus_lines(question: str) -> list:
-    """Corpus sentence starts for a race the question names, and for a driver in that race."""
+    """Corpus sentence starts for a race the question names and a driver in it, or else a career overview."""
     text = plain(question)
     season = SEASON.search(text)
     if season is None:
-        return []
+        return career_lines(text)
     year = int(season.group(1))
     round_no, race_name, rest = find_race(text.replace(season.group(0), ""), year)
     driver, _ = find_name(rest, DRIVERS)
