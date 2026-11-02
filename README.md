@@ -4,7 +4,7 @@ A question-answering system over Formula 1 data from 1950 to 2026. It combines t
 
 Each part is built without a framework so it can be measured on its own, and each notebook builds on what the one before it measured.
 
-**Result:** on 30 new questions, the system answered 27 correctly and gave 1 wrong answer, up from 14 right and 7 wrong for the same questions on its earlier version.
+**Result:** on 30 new questions, the system answered 26 correctly and gave 4 wrong answers, up from 20 right and 9 wrong for the same questions on its earlier version.
 
 ## How it works
 
@@ -33,7 +33,7 @@ flowchart TD
 | Retrieval | Dense and BM25 search merged with reciprocal rank fusion | `src/retriever.py` |
 | Live data | Pulls the current season from the Jolpica API and merges it | `src/live_data.py` |
 | Extra data | Adds 612 sprint results and 12,913 pit stops from the same API | `src/extra_data.py` |
-| Corpus | Turns 26,269 result rows, the standings and a summary of each race into 29,813 sentences | `src/text_gen.py` |
+| Corpus | Turns 26,269 result rows, the standings and summaries of each race, driver, team and circuit into 32,555 sentences | `src/text_gen.py` |
 
 ## Results
 
@@ -41,21 +41,23 @@ The latest evaluation used 30 questions written after the code was committed, wi
 
 | Pipeline | Right | Wrong | Refused |
 |---|---|---|---|
-| Earlier hybrid | 14 | 7 | 9 |
-| SQL only | 8 | 7 | 15 |
-| Vector only | 17 | 3 | 10 |
-| **Current hybrid** | **27** | 1 | 2 |
+| Earlier hybrid | 20 | 9 | 1 |
+| SQL only | 12 | 13 | 5 |
+| Vector only | 18 | 3 | 9 |
+| **Current hybrid** | **26** | 4 | 0 |
 
 | Question type | SQL | Vector | Hybrid |
 |---|---|---|---|
-| Single fact (9) | 2 | 7 | 9 |
-| Aggregate (9) | 1 | 0 | 8 |
-| Narrative (5) | 1 | 3 | 3 |
-| Unanswerable (7) | 4 | 7 | 7 |
+| Single fact (8) | 5 | 4 | 8 |
+| Aggregate (9) | 4 | 3 | 8 |
+| Narrative (7) | 0 | 5 | 5 |
+| Unanswerable (6) | 3 | 6 | 5 |
 
-Templates answered 14 of the 30 without the model. One gained question asks about pit stops, data the earlier version didn't have. An earlier frozen set of 30 went from 21 right to 25 with the first round of these changes, before the corpus cleaning and new data.
+Templates answered 11 of the 30 without the model. Most of the gain came from grouping teams that raced under several names and from adding overview sentences for drivers, teams and circuits. Two of the four wrong answers were true but left out the expected fact. The other two led to fixes made after this run, which no evaluation has scored yet.
 
-Scoring retrieval separately, the answer sentence reached the top 5 for 7 of 9 questions, up from 6 of 9. On the earlier frozen set it rose from 9 of 12 to 11 of 12.
+Two earlier frozen sets of 30 rose from 14 right to 27 and from 21 right to 25, each measuring an earlier round of changes.
+
+Search alone found the answer sentence for 7 of 14 questions, down from 8 of 14, because the new sentences compete with the old ones. With sentences pinned for the race, season or career a question names, the context held it for 13 of 14.
 
 Scoring checks that each answer contains the expected fact. The questions were written by the system's author and each ran once, so these scores show direction rather than a precise rate.
 
@@ -64,6 +66,10 @@ Scoring checks that each answer contains the expected fact. The questions were w
 **Sentences built from tables, not scraped text.** Every sentence comes from a database row, so retrieved context can be traced to its source. The cost is a corpus of near-identical sentences, which is hard on embeddings, so each race also gets one summary sentence naming its circuit, winner, pole sitter and podium.
 
 **Templates before the model.** Who won, who was on pole and how many wins all follow fixed shapes, so Python parses them and fills the SQL. A template must account for every word of the question, and any word it doesn't recognise sends the question to the model instead.
+
+**One team, however many names.** Early entries pair chassis and engine, so Cooper appears under 10 names and an exact match gave it 2 wins instead of 16. Names are grouped into teams for counts and rankings. Team Lotus, the 2010-2011 Lotus team and Lotus F1 stay separate, and a question about "Lotus" alone counts all three and says so.
+
+**Overviews are derived, not retrieved from race rows.** 88% of the original corpus was per-car race results, so "Tell me about Niki Lauda" had no sentence to find. One sentence per driver, team and circuit now holds those totals, and the question's subject pins it into the context.
 
 **Status, not position, says what happened.** Every result row has a position, even a retirement, so sentences are built from `status`. That turns a misleading "finished 20th" into "retired (Collision)".
 
@@ -83,10 +89,9 @@ Scoring checks that each answer contains the expected fact. The questions were w
 
 ## What I'd do next
 
-1. Rank race summary sentences first for questions about a whole race.
-2. Add sprint wins to the templates, since the data is now loaded.
-3. Add lap-by-lap data from the same API to answer questions about laps led.
-4. Test a larger local model on new questions.
+1. Return a pinned overview sentence directly, so the model can't drop its main facts.
+2. Add lap-by-lap data from the same API to answer questions about laps led.
+3. Test a larger local model on new questions.
 
 ## Run it
 
@@ -106,7 +111,7 @@ Run these notebooks in order to build the data:
 3. `04_naive_rag` builds the Chroma index.
 4. `07_jolpica_live_data` adds the current season. It's safe to run again.
 
-Then add sprints and pit stops with `python -m src.extra_data`, which is also safe to repeat.
+Then add sprints and pit stops with `python -m src.extra_data` and fix source names with `python -m src.clean_data`. Both are safe to repeat. Run notebook 07 once more to rewrite the corpus and index with them.
 
 Then ask a question from the repo root:
 
@@ -133,7 +138,7 @@ python tests/test_text_gen.py
 | `notebooks/` | The project in order, one concept each (see below) |
 | `src/` | Reusable pipeline code |
 | `tests/` | Plain Python checks, including real SQL the model produced |
-| `eval/` | 168 questions across 8 sets, plus every recorded result |
+| `eval/` | 198 questions across 9 sets, plus every recorded result |
 
 | Notebook | Topic | Main finding |
 |---|---|---|
@@ -147,7 +152,7 @@ python tests/test_text_gen.py
 | 07 | Live data | 15 more rounds of 2026 through a validated merge |
 | 08 | Final evaluation | Retrieval, generation and end-to-end scored separately |
 
-Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout2_*.json`.
+Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout3_*.json`.
 
 ## Stack
 
