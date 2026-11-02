@@ -1,12 +1,11 @@
 """Fused dense and BM25 retrieval, moved from notebook 06."""
-import re
 from pathlib import Path
 
 import chromadb
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
-from src.text_to_sql import MODEL, client
+from src.text_to_sql import MODEL, client, words
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -21,11 +20,7 @@ embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 collection = chromadb.PersistentClient(path=str(PROJECT_ROOT / "chroma_db")).get_collection("f1_corpus")
 
 
-def tokenize(text: str) -> list:
-    return re.findall(r"[a-z0-9]+", text.lower())
-
-
-bm25 = BM25Okapi([tokenize(s) for s in sentences])
+bm25 = BM25Okapi([words(s) for s in sentences])
 
 
 def dense_search(query: str, k: int) -> list:
@@ -35,7 +30,7 @@ def dense_search(query: str, k: int) -> list:
 
 
 def bm25_search(query: str, k: int) -> list:
-    scores = bm25.get_scores(tokenize(query))
+    scores = bm25.get_scores(words(query))
     return sorted(range(len(sentences)), key=lambda i: -scores[i])[:k]
 
 
