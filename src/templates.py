@@ -294,8 +294,27 @@ def standings_points_sql(driver, team, period) -> str:
                WHERE s.{period} AND d.given_name || ' ' || d.family_name = {quoted(driver)}"""
 
 
+def load_circuits() -> dict:
+    """Circuit name, id or town for circuits that held a race. George and Villeneuve are drivers first."""
+    rows = con.execute("""SELECT DISTINCT c.circuit_id, c.circuit_name, c.locality FROM f1_circuits c
+                          JOIN f1_races USING (circuit_id) JOIN f1_results USING (season, round)""").fetchall()
+    name_words = {word for name in DRIVERS.values() for word in plain(name).split()}
+    found = {}
+    for circuit_id, name, town in rows:
+        for key in {plain(name), plain(circuit_id), plain(town)}:
+            if key and not (" " not in key and key in name_words):
+                found.setdefault(key, set()).add(name)
+    return {key: names.pop() for key, names in found.items() if len(names) == 1}
+
+
+CIRCUITS = load_circuits()
+
+
 def career_lines(text: str) -> list:
-    """Each named driver and team, so a comparison gets both overviews."""
+    """Each named driver and team, so a comparison gets both overviews. A circuit goes first, so Red Bull Ring isn't Red Bull."""
+    circuit, text = find_name(text, CIRCUITS)
+    if circuit:
+        return [f"{circuit} in "]
     subjects = []
     for names in (DRIVERS, CONSTRUCTORS):
         subject, text = find_name(text, names)
@@ -303,7 +322,8 @@ def career_lines(text: str) -> list:
             subjects.append(subject)
             subject, text = find_name(text, names)
     if "Lotus" in subjects:
-        subjects += ["Team Lotus", "Lotus F1"]
+        at = subjects.index("Lotus")
+        subjects[at:at + 1] = ["Team Lotus", "Lotus", "Lotus F1"]
     return [f"{subject} raced in Formula 1 " for subject in subjects]
 
 

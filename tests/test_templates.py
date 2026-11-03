@@ -134,5 +134,10 @@ assert focus_lines("Compare Ayrton Senna and Alain Prost") == ["Ayrton Senna rac
 assert focus_lines("Tell me about Brabham-Repco") == ["Brabham-Repco raced in Formula 1 "]
 assert set(focus_lines("Tell me about Lotus")) == {"Lotus raced in Formula 1 ", "Team Lotus raced in Formula 1 ", "Lotus F1 raced in Formula 1 "}
 assert focus_lines("Who won the British Grand Prix?") == []
+assert focus_lines("Tell me about the Spa-Francorchamps circuit") == ["Circuit de Spa-Francorchamps in "]
+assert focus_lines("Tell me about Monza") == ["Autodromo Nazionale di Monza in "]
+assert focus_lines("Describe the Red Bull Ring") == ["Red Bull Ring in "]
+assert focus_lines("Tell me about George Russell") == ["George Russell raced in Formula 1 "]
+assert focus_lines("Tell me about racing in Barcelona") == []  # three circuits there
 
 print("template checks passed")

@@ -47,15 +47,26 @@ Answer:"""
     return answer
 
 
+OVERVIEW = re.compile(r"^\s*(tell me about|describe|summari[sz]e|compare|give (me )?an overview of|what happened (at|in)\b)", re.IGNORECASE)
+
+
+def pinned_lines(question: str) -> list:
+    """In the order focus_lines gives, so the subject the question names first comes first."""
+    return [s for start in focus_lines(question) for s in sentences if s.startswith(start)]
+
+
 def find_context(question: str, k: int = 5) -> list:
     """Sentences about a race the question names go first, because every car's result looks alike to search."""
-    starts = tuple(focus_lines(question))
-    pinned = [s for s in sentences if s.startswith(starts)] if starts else []
+    pinned = pinned_lines(question)
     return (pinned + [s for s in (sentences[i] for i in fused_search(question, k)) if s not in pinned])[:k]
 
 
 def answer_vector(question: str) -> tuple:
     found = find_context(question)
+    pinned = pinned_lines(question)
+    # an overview sentence already is the answer, and a paraphrase can drop its main facts
+    if OVERVIEW.search(question) and pinned:
+        return " ".join(pinned), found
     return answer_from_context(question, found), found
 
 
