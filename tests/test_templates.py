@@ -103,8 +103,11 @@ declined("Which driver scored the most points in 2021?")
 for question in ("How many fans watched the 2019 British Grand Prix?", "Who was the team principal of Red Bull in 2015?",
                  "How tall is Lando Norris?", "How much does a Ferrari engine cost?"):
     assert asks_for_missing_field(question), question
-for question in ("How many wins did Senna have?", "Who was the youngest winner?", "Who was the 2021 champion?", "How many laps did Senna complete?"):
+for question in ("How many wins did Senna have?", "Who was the youngest winner?", "Who was the 2021 champion?", "How many laps did Senna complete?",
+                 "Which team won the 2011 constructors championship?", "Which driver has the most wins?", "Which country hosted the most races?"):
     assert not asks_for_missing_field(question), question
+for question in ("Which company made the brakes for Ferrari in 2004?", "Which engineer worked with Senna?"):
+    assert asks_for_missing_field(question), question
 
 assert NOT_IN_DATA.search("How many laps did Max Verstappen lead in 2023?")
 assert NOT_IN_DATA.search("Who is the race engineer of Lewis Hamilton?")

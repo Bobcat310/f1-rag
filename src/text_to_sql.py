@@ -76,10 +76,15 @@ WHO_ROLE = re.compile(r"^\s*who (?:is|was) (?:the|his|her|their) (\w+)", re.IGNO
 ROLES = set("""winner champion first last youngest oldest fastest most best only leader runner second third driver
     drivers constructors world teammate""".split())
 NO_MEASURE = re.compile(r"^\s*how (much|tall|heavy|big|long|fast|far)\b", re.IGNORECASE)
+WHICH_THING = re.compile(r"^\s*which (\w+)", re.IGNORECASE)
+CHOOSABLE = set("""driver drivers team teams constructor constructors race races grand circuit circuits track tracks
+    season seasons year years round rounds country countries nationality""".split())
 
 
 def asks_for_missing_field(question: str) -> bool:
-    counted, role = HOW_MANY.search(question), WHO_ROLE.search(question)
+    counted, role, which = HOW_MANY.search(question), WHO_ROLE.search(question), WHICH_THING.search(question)
+    if which is not None and which.group(1).lower() not in CHOOSABLE:
+        return True  # which company, which engineer: the tables only pick drivers, teams, races and places
     return (NO_MEASURE.search(question) is not None
             or (counted is not None and counted.group(1).lower() not in COUNTABLE)
             or (role is not None and role.group(1).lower() not in ROLES and not role.group(1).isdigit()))
