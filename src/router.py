@@ -47,7 +47,8 @@ Answer:"""
     return answer
 
 
-OVERVIEW = re.compile(r"^\s*(tell me about|describe|summari[sz]e|compare|give (me )?an overview of|what happened (at|in)\b)", re.IGNORECASE)
+OVERVIEW = re.compile(r"^\s*(tell me about|describe|summari[sz]e|compare|give (me )?an overview of|what happened (at|in)\b"
+                      r"|how did\b.*\b(do|go|perform|fare)\b)", re.IGNORECASE)
 
 
 def pinned_lines(question: str) -> list:
