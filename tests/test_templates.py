@@ -87,8 +87,13 @@ declined("How many wins did Hamilton have from pole?")
 declined("How many consecutive wins did Vettel have in 2013?")
 declined("How many championships did Hamilton win?")
 declined("How many wins did Lewis Hamilton have in 1990?")  # never raced then
-declined("Who finished second in the 2021 Abu Dhabi Grand Prix?")
+PLACED = "SELECT driver_name FROM f1_results r JOIN f1_races c USING (season, round) WHERE r.season = {} AND c.race_name = '{}' AND r.position = {}"
+name("Who finished second in the 2021 Abu Dhabi Grand Prix?", one(PLACED.format(2021, "Abu Dhabi Grand Prix", 2)))
+name("Who came third at the 2018 Belgian Grand Prix?", one(PLACED.format(2018, "Belgian Grand Prix", 3)))
+name("Who placed 5th in the 2019 race at Monza?", one(PLACED.format(2019, "Italian Grand Prix", 5)))
+assert "finished 2nd in the 2021 Abu Dhabi Grand Prix" in template_answer("Who finished second in the 2021 Abu Dhabi Grand Prix?")["answer"]
 declined("Who finished second in the 2021 drivers championship?")
+declined("Who finished second most often in 2021?")
 declined("Who won the British Grand Prix?")             # no season
 declined("Who won the 2026 drivers championship?")      # season still running
 declined("Who won the 2020 race at Silverstone?")       # two races there that year

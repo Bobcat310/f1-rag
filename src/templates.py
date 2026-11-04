@@ -6,7 +6,7 @@ recognise returns None, so the question goes to the model instead of being misre
 """
 import re
 
-from src.text_gen import number, team_families
+from src.text_gen import number, ordinal, team_families
 from src.text_to_sql import con, words
 
 SEASON = re.compile(r"\b(19[5-9]\d|20[0-2]\d)\b")
@@ -14,6 +14,8 @@ DECADE = re.compile(r"\b(19[5-9]|20[0-2])0s\b")
 COUNT = re.compile(r"^(how many|what (is|was) the (total )?number of)\b")
 WINNER = re.compile(r"^(who (won|was the winner|finished first|came first|took (the )?(win|victory))|which (driver|team|constructor) won)\b")
 POLE = re.compile(r"^(who|which driver)\b.*\bpole\b")
+PLACES = {"second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10}
+PLACE = re.compile(r"^(who|which driver) (finished|came|placed) (" + "|".join(PLACES) + r"|\d+(st|nd|rd|th))\b")
 MOST = re.compile(r"^(who|which (driver|team|constructor))\b.*\bmost\b")
 PIT_STOPS = re.compile(r"\bpit stops?\b")
 AVERAGE_PIT = re.compile(r"^(what (is|was) )?(the )?(average|mean) pit stop\b")
@@ -121,17 +123,27 @@ def join_names(names: list) -> str:
 
 
 def race_answer(text: str, season: int) -> dict:
+    place = PLACE.search(text)
+    if place:
+        word = place.group(3)
+        place_no = PLACES.get(word) or int(word[:-2])
+        text = without(word, text).replace(" placed ", " finished ")
     round_no, race_name, rest = find_race(text, season)
     if round_no is None or set(rest.split()) - RACE_FILLER:
         return None
-    wants_pole = POLE.search(text) is not None and WINNER.search(text) is None
-    condition = "grid = 1" if wants_pole else "position = 1"
+    wants_pole = not place and POLE.search(text) is not None and WINNER.search(text) is None
+    condition = "grid = 1" if wants_pole else f"position = {place_no if place else 1}"
     sql = f"SELECT driver_name, constructor FROM f1_results WHERE season = {season} AND round = {round_no} AND {condition}"
     rows = con.execute(sql).fetchall()
     if not rows:
         return None
     names = join_names([f"{driver} ({team})" for driver, team in rows])
-    answer = f"{names} started on pole at the {season} {race_name}." if wants_pole else f"{names} won the {season} {race_name}."
+    if wants_pole:
+        answer = f"{names} started on pole at the {season} {race_name}."
+    elif place:
+        answer = f"{names} finished {ordinal(place_no)} in the {season} {race_name}."
+    else:
+        answer = f"{names} won the {season} {race_name}."
     return {"answer": answer, "sql": sql}
 
 
@@ -362,6 +374,6 @@ def template_answer(question: str) -> dict:
     rest = text.replace(season.group(0), "")
     if CHAMPION.search(text):
         return title_answer(rest, year)
-    if WINNER.search(text) or POLE.search(text):
+    if WINNER.search(text) or POLE.search(text) or PLACE.search(text):
         return race_answer(rest, year)
     return None
