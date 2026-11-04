@@ -108,6 +108,17 @@ for question in ("How many wins did Senna have?", "Who was the youngest winner?"
     assert not asks_for_missing_field(question), question
 for question in ("Which company made the brakes for Ferrari in 2004?", "Which engineer worked with Senna?"):
     assert asks_for_missing_field(question), question
+for question in ("What is the top speed of a Red Bull RB19?", "What was Max Verstappen's top speed at Monza in 2023?",
+                 "What is the name of Lewis Hamilton's dog?", "What fuel does Mercedes use?", "What brand of helmet does Charles Leclerc wear?",
+                 "Which driver has the most Instagram followers?", "Who will win the 2026 drivers championship?"):
+    assert asks_for_missing_field(question), question
+for question in ("What was Lewis Hamilton's points total in 2020?", "What is the average points scored by Mercedes per season?",
+                 "What team did Sebastian Vettel drive for in 2015?", "What happened at the 2010 Bahrain Grand Prix?",
+                 "What is the name of the circuit in Monza?", "What year did Ayrton Senna win his first title?",
+                 "Who has the most career podiums?", "Who is the most successful driver?"):
+    assert not asks_for_missing_field(question), question
+name("What was the average pit stop time at the 2020 Italian Grand Prix?", f"{one('''SELECT ROUND(AVG(duration), 2) FROM f1_pit_stops
+    WHERE season = 2020 AND race_name = 'Italian Grand Prix' AND duration <= 120'''):.2f}")
 
 assert NOT_IN_DATA.search("How many laps did Max Verstappen lead in 2023?")
 assert NOT_IN_DATA.search("Who is the race engineer of Lewis Hamilton?")
