@@ -38,7 +38,7 @@
   {"id": "test2_09", "split": "test2", "kind": "standings", "question": "Who won the 2009 drivers championship?", "truth_sql": "SELECT driver_id FROM f1_driver_standings WHERE season=2009 AND position=1", "accept": ["Jenson Button"]},
   {"id": "test2_10", "split": "test2", "kind": "standings", "question": "Which team won the 2018 constructors championship?", "truth_sql": "SELECT constructor FROM f1_constructor_standings WHERE season=2018 AND position=1"},
   {"id": "test2_11", "split": "test2", "kind": "join", "question": "Which driver has the most wins at Interlagos?", "truth_sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id='interlagos' AND r.position=1 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
-  {"id": "test2_12", "split": "test2", "kind": "unanswerable", "question": "What was the average pit stop time at the 2020 Italian Grand Prix?", "truth_sql": null},
+  {"id": "test2_12", "split": "test2", "kind": "aggregate", "question": "What was the average pit stop time at the 2020 Italian Grand Prix?", "truth_sql": "SELECT ROUND(AVG(duration),2) FROM f1_pit_stops WHERE season=2020 AND race_name='Italian Grand Prix' AND duration<=120"},
   {"id": "test2_13", "split": "test2", "kind": "unanswerable", "question": "Which driver is the most popular with fans?", "truth_sql": null},
 
   {"id": "test3_01", "split": "test3", "kind": "fact", "question": "How many Grands Prix did Jim Clark win?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name='Jim Clark' AND position=1"},
