@@ -4,7 +4,7 @@ A question-answering system over Formula 1 data from 1950 to 2026. It combines t
 
 Each part is built without a framework so it can be measured on its own, and each notebook builds on what the one before it measured.
 
-**Result:** on 30 new questions, the system answered 26 correctly and gave 4 wrong answers, up from 20 right and 9 wrong for the same questions on its earlier version.
+**Result:** on 30 new questions, the system answered 27 correctly and gave 3 wrong answers, up from 23 right and 7 wrong for the same questions on its earlier version.
 
 ## How it works
 
@@ -41,23 +41,23 @@ The latest evaluation used 30 questions written after the code was committed, wi
 
 | Pipeline | Right | Wrong | Refused |
 |---|---|---|---|
-| Earlier hybrid | 20 | 9 | 1 |
-| SQL only | 12 | 13 | 5 |
-| Vector only | 18 | 3 | 9 |
-| **Current hybrid** | **26** | 4 | 0 |
+| Earlier hybrid | 23 | 7 | 0 |
+| SQL only | 12 | 9 | 9 |
+| Vector only | 19 | 5 | 6 |
+| **Current hybrid** | **27** | 3 | 0 |
 
 | Question type | SQL | Vector | Hybrid |
 |---|---|---|---|
-| Single fact (8) | 5 | 4 | 8 |
-| Aggregate (9) | 4 | 3 | 8 |
-| Narrative (7) | 0 | 5 | 5 |
-| Unanswerable (6) | 3 | 6 | 5 |
+| Single fact (8) | 4 | 6 | 7 |
+| Aggregate (9) | 3 | 2 | 9 |
+| Narrative (7) | 0 | 6 | 6 |
+| Unanswerable (6) | 5 | 5 | 5 |
 
-Templates answered 11 of the 30 without the model. Most of the gain came from grouping teams that raced under several names and from adding overview sentences for drivers, teams and circuits. Two of the four wrong answers were true but left out the expected fact. The other two led to fixes made after this run, which no evaluation has scored yet.
+Templates answered 13 of the 30 without the model. Each of the four gains traces to a change made after the previous set: a template for average pit stop time that leaves out red flag stoppages, refusing questions about owners, and returning a pinned overview or circuit sentence as written. The three wrong answers led to fixes made after this run, which no evaluation has scored yet: a podium the model misread, a season paraphrased without its wins, and a "which company" question nothing refused.
 
-Two earlier frozen sets of 30 rose from 14 right to 27 and from 21 right to 25, each measuring an earlier round of changes.
+Three earlier frozen sets of 30 rose from 14 right to 27, from 21 to 25 and from 20 to 26, each measuring an earlier round of changes.
 
-Search alone found the answer sentence for 7 of 14 questions, down from 8 of 14, because the new sentences compete with the old ones. With sentences pinned for the race, season or career a question names, the context held it for 13 of 14.
+Search alone found the answer sentence for 9 of 14 questions. With sentences pinned for the race, season, career or circuit a question names, the context held it for all 14.
 
 Scoring checks that each answer contains the expected fact. The questions were written by the system's author and each ran once, so these scores show direction rather than a precise rate.
 
@@ -69,7 +69,7 @@ Scoring checks that each answer contains the expected fact. The questions were w
 
 **One team, however many names.** Early entries pair chassis and engine, so Cooper appears under 10 names and an exact match gave it 2 wins instead of 16. Names are grouped into teams for counts and rankings. Team Lotus, the 2010-2011 Lotus team and Lotus F1 stay separate, and a question about "Lotus" alone counts all three and says so.
 
-**Overviews are derived, not retrieved from race rows.** 88% of the original corpus was per-car race results, so "Tell me about Niki Lauda" had no sentence to find. One sentence per driver, team and circuit now holds those totals, and the question's subject pins it into the context.
+**Overviews are derived, not retrieved from race rows.** 88% of the original corpus was per-car race results, so "Tell me about Niki Lauda" had no sentence to find. One sentence per driver, team and circuit now holds those totals, and the question's subject pins it into the context. An overview question gets that sentence back as written, because a paraphrase from the model can drop its main facts.
 
 **Status, not position, says what happened.** Every result row has a position, even a retirement, so sentences are built from `status`. That turns a misleading "finished 20th" into "retired (Collision)".
 
@@ -89,7 +89,7 @@ Scoring checks that each answer contains the expected fact. The questions were w
 
 ## What I'd do next
 
-1. Return a pinned overview sentence directly, so the model can't drop its main facts.
+1. Refuse "what is the X" questions in Python when the tables hold no X. 12 of 47 unanswerable questions, such as top speeds and grandstand capacity, still reach the model.
 2. Add lap-by-lap data from the same API to answer questions about laps led.
 3. Test a larger local model on new questions.
 
@@ -131,6 +131,12 @@ python tests/test_live_data.py
 python tests/test_text_gen.py
 ```
 
+Score a question set with SQL only, vector only and the hybrid. `--code` points at another checkout to score an earlier version on the same questions:
+
+```bash
+python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
+```
+
 ## Repo layout
 
 | Path | Contents |
@@ -138,7 +144,7 @@ python tests/test_text_gen.py
 | `notebooks/` | The project in order, one concept each (see below) |
 | `src/` | Reusable pipeline code |
 | `tests/` | Plain Python checks, including real SQL the model produced |
-| `eval/` | 198 questions across 9 sets, plus every recorded result |
+| `eval/` | 228 questions across 10 sets, every recorded result, and the runner that scores a set |
 
 | Notebook | Topic | Main finding |
 |---|---|---|
@@ -152,7 +158,7 @@ python tests/test_text_gen.py
 | 07 | Live data | 15 more rounds of 2026 through a validated merge |
 | 08 | Final evaluation | Retrieval, generation and end-to-end scored separately |
 
-Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout3_*.json`.
+Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout4_*.json`.
 
 ## Stack
 
