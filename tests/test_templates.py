@@ -169,5 +169,12 @@ assert focus_lines("Tell me about Monza") == ["Autodromo Nazionale di Monza in "
 assert focus_lines("Describe the Red Bull Ring") == ["Red Bull Ring in "]
 assert focus_lines("Tell me about George Russell") == ["George Russell raced in Formula 1 "]
 assert focus_lines("Tell me about racing in Barcelona") == []  # three circuits there
+assert focus_lines("I'd love some background on the Tyrrell team.") == ["Tyrrell raced in Formula 1 "]  # not John Love
+assert focus_lines("Give me a rundown of Juan Manuel Fangio's career") == ["Juan Fangio raced in Formula 1 "]
+assert focus_lines("What sort of season did Jenson Button have in 2009?") == ["At the end of the 2009 season, Jenson Button "]
+for question in ("What kind of year did Kimi Raikkonen have in 2007?", "What's the story of Monza?"):
+    assert not asks_for_missing_field(question), question
+for question in ("What kind of engine did Lotus use in 1967?", "What's the top speed of a Ferrari?"):
+    assert asks_for_missing_field(question), question
 
 print("template checks passed")

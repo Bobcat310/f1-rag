@@ -364,13 +364,21 @@ def circuit_most_answer(text: str) -> dict:
     return {"answer": f"{rows[0][0]} hosted the most Formula 1 races{when}, with {rows[0][1]}.", "sql": sql}
 
 
-def career_lines(text: str) -> list:
+def named_only(names: dict, question: str) -> dict:
+    """In free text, a lone surname counts only when capitalised, so "I'd love" isn't John Love. All lower case is taken as typed."""
+    if question == question.lower():
+        return names
+    capitalised = {plain(word) for word in re.findall(r"\w+", question) if word[0].isupper()}
+    return {key: name for key, name in names.items() if " " in key or key in capitalised}
+
+
+def career_lines(text: str, question: str = "") -> list:
     """Each named driver and team, so a comparison gets both overviews. A circuit goes first, so Red Bull Ring isn't Red Bull."""
     circuit, text = find_name(text, CIRCUITS)
     if circuit:
         return [f"{circuit} in "]
     subjects = []
-    for names in (DRIVERS, CONSTRUCTORS):
+    for names in (named_only(DRIVERS, question), CONSTRUCTORS):
         subject, text = find_name(text, names)
         while subject:
             subjects.append(subject)
@@ -386,10 +394,10 @@ def focus_lines(question: str) -> list:
     text = plain(question)
     season = SEASON.search(text)
     if season is None:
-        return career_lines(text)
+        return career_lines(text, question)
     year = int(season.group(1))
     round_no, race_name, rest = find_race(text.replace(season.group(0), ""), year)
-    driver, _ = find_name(rest, DRIVERS)
+    driver, _ = find_name(rest, named_only(DRIVERS, question))
     if round_no is None:
         if driver is None:
             return []

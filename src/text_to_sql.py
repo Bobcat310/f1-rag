@@ -90,12 +90,14 @@ FIELD_ENDS = set("""of at in on by for from during per with to when after before
 FIELDS = set("""points total time times duration average team teams constructor constructors driver drivers position positions
     place grid number count result results score win wins victories podium podiums pole poles lap laps race races round rounds
     circuit circuits track season seasons year years date age nationality country championship championships title titles
-    standing standings record stop stops""".split())
+    standing standings record stop stops story history career background summary overview""".split())
 
 
 def asked_field(question: str):
     """The noun a "what" question asks for: speed in "What was X's top speed at Monza?". None when it isn't that shape."""
-    match = re.match(r"\s*what (\w+)(.*)", question.lower().replace("’", "'"))
+    text = re.sub(r"^(\s*)what's\b", r"\1what is", question.lower().replace("’", "'"))
+    text = re.sub(r"\b(kind|sort|type) of ", "", text)  # what kind of year asks for a year
+    match = re.match(r"\s*what (\w+)(.*)", text)
     if match is None or match.group(1) in ("happened", "do", "does", "did"):
         return None
     if match.group(1) not in ("is", "was", "are", "were"):
