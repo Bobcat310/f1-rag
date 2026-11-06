@@ -4,7 +4,7 @@ A question-answering system over Formula 1 data from 1950 to 2026. It combines t
 
 Each part is built without a framework so it can be measured on its own, and each notebook builds on what the one before it measured.
 
-**Result:** on 30 new questions, the system answered 27 correctly and gave 3 wrong answers, up from 23 right and 7 wrong for the same questions on its earlier version.
+**Result:** on the latest 30 new questions, written blind to the code, the system answered 18 correctly and gave 9 wrong answers. Retrieval alone got 20 right. An earlier set, worded closer to the system's own phrasing, scored 27 right and 3 wrong. Changes made since the latest run haven't been scored yet.
 
 ## How it works
 
@@ -18,10 +18,10 @@ flowchart TD
     S --> G{Value guard}
     G -->|invented value, retry| S
     G -->|passes| D[(DuckDB)]
-    D -->|usable result| A1[Sentence from rows, number check]
-    D -->|error, empty or lone zero| V
+    D -->|ranking, or retrieval can't answer| A1[Sentence from rows, number check]
+    D -->|anything else| V
     V --> C[(Chroma + BM25)]
-    C --> A2[Answer from top 5 sentences]
+    C --> A2[Answer from top 5 sentences, or the pinned sentences as written]
 ```
 
 | Part | What it does | Code |
@@ -37,29 +37,34 @@ flowchart TD
 
 ## Results
 
-The latest evaluation used 30 questions written after the code was committed, with live 2026 data through round 18. The same questions ran through the earlier version and the current code, so the two can be compared directly.
+Each evaluation used 30 questions committed after the code and before any run, with live 2026 data through round 18. The same questions ran through the earlier version and the current code, so the two can be compared directly.
 
-| Pipeline | Right | Wrong | Refused |
+The fifth set was written by a separate agent that saw the schema and the corpus but not the code, the README or any results. Its wording was looser than the four sets before it, and the score fell:
+
+| Pipeline | Holdout 4 | Holdout 5 |
+|---|---|---|
+| SQL only | 12 right, 9 wrong | 10 right, 10 wrong |
+| Vector only | 19 right, 5 wrong | **20 right, 6 wrong** |
+| Hybrid | **27 right, 3 wrong** | 18 right, 9 wrong |
+
+| Holdout 5 by type | SQL | Vector | Hybrid |
 |---|---|---|---|
-| Earlier hybrid | 23 | 7 | 0 |
-| SQL only | 12 | 9 | 9 |
-| Vector only | 19 | 5 | 6 |
-| **Current hybrid** | **27** | 3 | 0 |
+| Single fact (8) | 5 | 8 | 7 |
+| Aggregate (9) | 1 | 2 | 2 |
+| Narrative (7) | 0 | 4 | 4 |
+| Unanswerable (6) | 4 | 6 | 5 |
 
-| Question type | SQL | Vector | Hybrid |
-|---|---|---|---|
-| Single fact (8) | 4 | 6 | 7 |
-| Aggregate (9) | 3 | 2 | 9 |
-| Narrative (7) | 0 | 6 | 6 |
-| Unanswerable (6) | 5 | 5 | 5 |
+Templates answered 13 of holdout 4 but only 2 of holdout 5, because words like "altogether", "crowned" or a middle name made them decline. Text-to-SQL then took those questions and answered six of them wrongly. That is why the hybrid lost to retrieval alone. Three changes since then answer those findings, and the next blind set will score them:
 
-Templates answered 13 of the 30 without the model. Each of the four gains traces to a change made after the previous set: a template for average pit stop time that leaves out red flag stoppages, refusing questions about owners, and returning a pinned overview or circuit sentence as written. The three wrong answers led to fixes made after this run, which no evaluation has scored yet: a podium the model misread, a season paraphrased without its wins, and a "which company" question nothing refused.
+- Templates accept looser wording, middle names, and wins at a named race or circuit. They now answer 120 of all 258 questions, each with its expected value.
+- Pinned sentences answer any open question, not only ones that start "Tell me about".
+- A sentence-backed answer wins over model-written SQL, except for rankings (see below).
 
-Three earlier frozen sets of 30 rose from 14 right to 27, from 21 to 25 and from 20 to 26, each measuring an earlier round of changes.
+Earlier frozen sets rose from 14 right to 27, from 21 to 25, from 20 to 26 and from 23 to 27, each measuring a round of changes. Those sets were written in phrasing close to the system's own, so they overstated how it handles new wording.
 
-Search alone found the answer sentence for 9 of 14 questions. With sentences pinned for the race, season, career or circuit a question names, the context held it for all 14.
+On holdout 5, search alone found the answer sentence for 10 of 15 questions, and 13 of 15 with pinned sentences.
 
-Scoring checks that each answer contains the expected fact. The questions were written by the system's author and each ran once, so these scores show direction rather than a precise rate.
+Scoring checks that each answer contains the expected fact. Each set ran once, so these scores show direction rather than a precise rate.
 
 ## Design decisions
 
@@ -67,9 +72,11 @@ Scoring checks that each answer contains the expected fact. The questions were w
 
 **Templates before the model.** Who won, who was on pole and how many wins all follow fixed shapes, so Python parses them and fills the SQL. A template must account for every word of the question, and any word it doesn't recognise sends the question to the model instead.
 
+**Sentence-backed answers over model-written SQL.** Model-written SQL runs without error even when it asks the wrong thing, and holdout 5 showed it answering counts wrongly with confidence. A retrieval answer must use only numbers from sentences built from the tables, so it wins when it gives one. On the 47 questions that took the SQL path across six runs, that choice would have scored 36 right and 10 wrong instead of 29 and 16. Rankings stay with SQL, because no sentence holds one: there SQL got 4 of 5 and retrieval 2.
+
 **One team, however many names.** Early entries pair chassis and engine, so Cooper appears under 10 names and an exact match gave it 2 wins instead of 16. Names are grouped into teams for counts and rankings. Team Lotus, the 2010-2011 Lotus team and Lotus F1 stay separate, and a question about "Lotus" alone counts all three and says so.
 
-**Overviews are derived, not retrieved from race rows.** 88% of the original corpus was per-car race results, so "Tell me about Niki Lauda" had no sentence to find. One sentence per driver, team and circuit now holds those totals, and the question's subject pins it into the context. An overview question gets that sentence back as written, because a paraphrase from the model can drop its main facts.
+**Overviews are derived, not retrieved from race rows.** 88% of the original corpus was per-car race results, so "Tell me about Niki Lauda" had no sentence to find. One sentence per driver, team and circuit now holds those totals, and the question's subject pins it into the context. An open question about a pinned subject gets those sentences back as written, because a paraphrase from the model can drop their main facts. A lone surname pins only when capitalised, so "I'd love some background" doesn't pin the driver John Love.
 
 **Status, not position, says what happened.** Every result row has a position, even a retirement, so sentences are built from `status`. That turns a misleading "finished 20th" into "retired (Collision)".
 
@@ -89,9 +96,10 @@ Scoring checks that each answer contains the expected fact. The questions were w
 
 ## What I'd do next
 
-1. Refuse "what is the X" questions in Python when the tables hold no X. 12 of 47 unanswerable questions, such as top speeds and grandstand capacity, still reach the model.
-2. Add lap-by-lap data from the same API to answer questions about laps led.
-3. Test a larger local model on new questions.
+1. Score the changes since holdout 5 on a new set written blind to the code.
+2. Answer "which driver scored the most points in a season" from the standings. Text-to-SQL ranks constructors for it, because its one example does.
+3. Add lap-by-lap data from the same API to answer questions about laps led.
+4. Test a larger local model on new questions.
 
 ## Run it
 
@@ -144,7 +152,7 @@ python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
 | `notebooks/` | The project in order, one concept each (see below) |
 | `src/` | Reusable pipeline code |
 | `tests/` | Plain Python checks, including real SQL the model produced |
-| `eval/` | 228 questions across 10 sets, every recorded result, and the runner that scores a set |
+| `eval/` | 258 questions across 11 sets, every recorded result, and the runner that scores a set |
 
 | Notebook | Topic | Main finding |
 |---|---|---|
@@ -158,7 +166,7 @@ python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
 | 07 | Live data | 15 more rounds of 2026 through a validated merge |
 | 08 | Final evaluation | Retrieval, generation and end-to-end scored separately |
 
-Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout4_*.json`.
+Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout5_*.json`.
 
 ## Stack
 
