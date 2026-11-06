@@ -248,15 +248,36 @@ def count_answer(text: str) -> dict:
     return {"answer": f"{subject} had {number(value)} {label}{when}.{note}", "sql": sql}
 
 
+def most_points_sql(by_team: bool, period) -> str:
+    """One season comes from the standings, which hold sprint points and old dropped scores. Longer spans add race and sprint points."""
+    if period and "BETWEEN" not in period:
+        if by_team:
+            return f"SELECT {TEAM_COLUMN}, SUM(points) AS n FROM f1_constructor_standings WHERE {period} GROUP BY 1 ORDER BY n DESC LIMIT 2"
+        return f"""SELECT d.given_name || ' ' || d.family_name, s.points AS n FROM f1_driver_standings s
+                   JOIN f1_drivers d USING (driver_id) WHERE s.{period} ORDER BY n DESC LIMIT 2"""
+    column = TEAM_COLUMN if by_team else "driver_name"
+    where = f"WHERE {period}" if period else ""
+    return f"""SELECT name, SUM(points) AS n FROM (SELECT {column} AS name, points FROM f1_results {where}
+               UNION ALL SELECT {column}, points FROM f1_sprint_results {where}) GROUP BY 1 ORDER BY n DESC LIMIT 2"""
+
+
 def most_answer(text: str) -> dict:
     matched = [m for m in METRICS if re.search(m[0], text)]
-    if len(matched) != 1 or matched[0][1] is None or re.search(r"\bsprints?\b", text):
-        return None  # season points need the standings, and this only ranks grand prix results
+    if len(matched) != 1 or re.search(r"\bsprints?\b", text):
+        return None  # this only ranks grand prix results
     _, condition, _, many = matched[0]
     period, when, rest = period_filter(text)
     if set(rest.split()) - MOST_FILLER:
         return None
     by_team = re.search(r"\b(team|constructor)\b", text) is not None
+    if condition is None:
+        sql = most_points_sql(by_team, period)
+        rows = con.execute(sql).fetchall()
+        if not rows or (len(rows) == 2 and rows[0][1] == rows[1][1]):
+            return None
+        season = SEASON.search(when)
+        so_far = " so far" if season and "BETWEEN" not in period and season_running(int(season.group(1))) else ""
+        return {"answer": f"{rows[0][0]} scored the most points{when}{so_far}, with {number(rows[0][1])}.", "sql": sql}
     column = TEAM_COLUMN if by_team else "driver_name"
     total = "COUNT(DISTINCT season * 100 + round)" if by_team and "= 1" in condition else "COUNT(*)"
     where = f"{period} AND {condition}" if period else condition

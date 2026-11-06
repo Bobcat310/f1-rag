@@ -109,7 +109,13 @@ declined("Who won the British Grand Prix?")             # no season
 declined("Who won the 2026 drivers championship?")      # season still running
 declined("Who won the 2020 race at Silverstone?")       # two races there that year
 declined("Which driver won the most races for Ferrari?")
-declined("Which driver scored the most points in 2021?")
+name("Which driver scored the most points in 2021?", one("""SELECT d.given_name || ' ' || d.family_name FROM f1_driver_standings s
+    JOIN f1_drivers d USING (driver_id) WHERE s.season = 2021 ORDER BY s.points DESC LIMIT 1"""))
+name("Which team scored the most points in 1967?", "Brabham")  # its two entries are added together
+name("Who has scored the most points?", one("""SELECT name FROM (SELECT driver_name AS name, points FROM f1_results
+    UNION ALL SELECT driver_name, points FROM f1_sprint_results) GROUP BY 1 ORDER BY SUM(points) DESC LIMIT 1"""))
+assert "so far" in template_answer("Who has the most points in 2026?")["answer"]
+declined("Who scored the most sprint points in 2023?")
 
 for question in ("How many fans watched the 2019 British Grand Prix?", "Who was the team principal of Red Bull in 2015?",
                  "How tall is Lando Norris?", "How much does a Ferrari engine cost?"):
