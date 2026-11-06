@@ -83,8 +83,25 @@ def answer_sql_only(question: str) -> str:
     return sql_answer(question, run["df"]) if usable(run) else "No usable result from the database."
 
 
+NO_ANSWER = re.compile(r"not in the context|does not (state|contain|mention)|no information|cannot (answer|determine)", re.IGNORECASE)
+# No one sentence holds a ranking, so a sentence-backed answer to one is usually about something else
+RANKING = re.compile(r"\b(most|least|fewest|fastest|slowest|youngest|oldest|highest|lowest|best|worst)\b|\bmore\b.*\bthan any\b",
+                     re.IGNORECASE)
+# Switch off to measure what preferring retrieval over model-written SQL adds
+PREFER_GROUNDED = True
+
+
+def grounded(answer: str, found: list) -> bool:
+    """An answer the model gave from the sentences. A copied sentence means the number check rejected its own answer."""
+    return not NO_ANSWER.search(answer) and answer not in found
+
+
 def ask(question: str) -> dict:
-    """The single entry point: choose a path, and fall back to retrieval if SQL gives nothing usable."""
+    """
+    The single entry point: choose a path. Model-written SQL runs without error even when it
+    asks the wrong thing, so a retrieval answer, whose numbers must appear in sentences built
+    from the tables, wins over it. SQL answers rankings, and anything retrieval can't.
+    """
     path = route(question)
     if path == "refuse":
         return {"path": path, "answer": "That isn't in the data.", "sql": None, "sources": []}
@@ -93,9 +110,11 @@ def ask(question: str) -> dict:
         return {"path": "template", "answer": fixed["answer"], "sql": fixed["sql"], "sources": []}
     if path == "sql":
         run = run_sql(question)
-        if usable(run):
+        if usable(run) and (RANKING.search(question) or not PREFER_GROUNDED):
             return {"path": path, "answer": sql_answer(question, run["df"]), "sql": run["sql"], "sources": []}
         answer, sources = answer_vector(question)
+        if usable(run) and not grounded(answer, sources):
+            return {"path": path, "answer": sql_answer(question, run["df"]), "sql": run["sql"], "sources": sources}
         return {"path": "sql>vector", "answer": answer, "sql": run["sql"], "sources": sources}
     answer, sources = answer_vector(question)
     return {"path": path, "answer": answer, "sql": None, "sources": sources}
