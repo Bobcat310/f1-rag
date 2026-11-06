@@ -97,9 +97,8 @@ Scoring checks that each answer contains the expected fact. Each set ran once, s
 ## What I'd do next
 
 1. Score the changes since holdout 5 on a new set written blind to the code.
-2. Answer "which driver scored the most points in a season" from the standings. Text-to-SQL ranks constructors for it, because its one example does.
-3. Add lap-by-lap data from the same API to answer questions about laps led.
-4. Test a larger local model on new questions.
+2. Add lap-by-lap data from the same API to answer questions about laps led. It's about 7,000 requests, so it means hours under the free rate limit.
+3. Test a larger local model on new questions.
 
 ## Run it
 
