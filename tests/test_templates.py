@@ -82,7 +82,18 @@ name("Which team has the most wins in the 1990s?", "Williams")
 name("Who has the most pole positions?", "Lewis Hamilton")
 
 declined("How many wins did Schumacher have?")          # Michael and Ralf both won races
-declined("How many wins did Hamilton have at Monza?")   # a word the template can't use
+number("How many wins did Hamilton have at Monza?", """SELECT COUNT(*) FROM f1_results r JOIN f1_races c USING (season, round)
+    WHERE r.driver_id = 'hamilton' AND c.circuit_id = 'monza' AND r.position = 1""")
+number("How many times did Ayrton Senna win the Monaco Grand Prix?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'senna' AND race_name = 'Monaco Grand Prix' AND position = 1")
+number("How many races did Brabham win altogether?", "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor LIKE 'Brabham%' AND position = 1")
+number("How many wins did Williams rack up during the 1980s?", "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor = 'Williams' AND position = 1 AND season BETWEEN 1980 AND 1989")
+number("How many wins did Juan Manuel Fangio have?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'fangio' AND position = 1")
+number("How many pit stops were made in total during the 2021 Hungarian Grand Prix?", "SELECT COUNT(*) FROM f1_pit_stops WHERE season = 2021 AND race_name = 'Hungarian Grand Prix'")
+declined("How many pit stops were made in 2021?")  # a whole season of every car's stops
+name("Who was crowned Formula 1 world champion in 1992?", "Nigel Mansell")
+name("Who came home in third place at the 2005 Japanese Grand Prix?", "Fernando Alonso")
+name("Which track has held more Grands Prix than any other circuit?", "Monza")
+name("Who has more wins than any other driver?", "Lewis Hamilton")
 declined("How many wins did Hamilton have from pole?")
 declined("How many consecutive wins did Vettel have in 2013?")
 declined("How many championships did Hamilton win?")
