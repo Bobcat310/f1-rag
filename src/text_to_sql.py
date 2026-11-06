@@ -64,7 +64,10 @@ HINTS = [
 # The dataset has none of this, so Python refuses without asking the model.
 NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|lap times?|favou?rite|popular|opinions?"
                          r"|engineers?|sponsors?|salary|salaries|contracts?|budgets?|attendance|penalt(y|ies)|overtak(es?|ing)"
-                         r"|design(s|ed|er|ers)?|owns|owned|owners?)\b"
+                         r"|design(s|ed|er|ers)?|owns|owned|owners?"
+                         # race-day details the results tables never record
+                         r"|safety cars?|virtual safety car|vsc|red flags?|driver of the day|team radio|radio|drs|sector times?"
+                         r"|strateg(y|ies)|undercut|telemetry|downforce|horsepower|prize money|tickets?|spectators?|crowds?)\b"
                          r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b", re.IGNORECASE)
 
 # SQL can only answer for things the tables hold, so these list what they hold
@@ -123,7 +126,8 @@ def asks_for_missing_field(question: str) -> bool:
         return True  # top speed, capacity, a prediction
     if any(word.lower() not in RANKABLE for word in RANKED.findall(question)):
         return True  # most Instagram followers
-    return (NO_MEASURE.search(question) is not None
+    # pit stop durations are the one length the tables hold
+    return ((NO_MEASURE.search(question) is not None and not re.search(r"\bpit stops?\b", question, re.IGNORECASE))
             or (counted is not None and counted.group(1).lower() not in COUNTABLE)
             or (role is not None and role.group(1).lower() not in ROLES and not role.group(1).isdigit()))
 

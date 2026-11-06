@@ -182,5 +182,10 @@ for question in ("What kind of year did Kimi Raikkonen have in 2007?", "What's t
     assert not asks_for_missing_field(question), question
 for question in ("What kind of engine did Lotus use in 1967?", "What's the top speed of a Ferrari?"):
     assert asks_for_missing_field(question), question
+for question in ("How many safety cars were there in the 2020 Tuscan Grand Prix?", "Who was Driver of the Day in Monaco 2023?",
+                 "What strategy did Ferrari use at Silverstone in 2022?", "How much prize money did Williams get?"):
+    assert NOT_IN_DATA.search(question) or asks_for_missing_field(question), question
+assert not asks_for_missing_field("How long was the fastest pit stop in 2023?")
+assert asks_for_missing_field("How long is the Monza circuit?")
 
 print("template checks passed")
