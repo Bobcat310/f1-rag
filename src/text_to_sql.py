@@ -67,7 +67,10 @@ NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|la
                          r"|design(s|ed|er|ers)?|owns|owned|owners?"
                          # race-day details the results tables never record
                          r"|safety cars?|virtual safety car|vsc|red flags?|driver of the day|team radio|radio|drs|sector times?"
-                         r"|strateg(y|ies)|undercut|telemetry|downforce|horsepower|prize money|tickets?|spectators?|crowds?)\b"
+                         r"|strateg(y|ies)|undercut|telemetry|downforce|horsepower|prize money|tickets?|spectators?|crowds?"
+                         # measures and belongings no table holds
+                         r"|top speeds?|speeds?|capacity|seating|weigh(s|t|ts)?|costs?|price[sd]?|money|colou?rs?|liver(y|ies)"
+                         r"|fuel|followers|social media|instagram|helmets?)\b"
                          r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b", re.IGNORECASE)
 
 # SQL can only answer for things the tables hold, so these list what they hold
@@ -85,50 +88,31 @@ CHOOSABLE = set("""driver drivers team teams constructor constructors race races
     season seasons year years round rounds country countries nationality""".split())
 
 
-RANKED = re.compile(r"\b(?:most|biggest|largest|fewest|least) (\w+)", re.IGNORECASE)
+# "most" only, because "at least one" isn't a ranking
+RANKED = re.compile(r"\b(?:most|biggest|largest) (\w+)", re.IGNORECASE)
 RANKABLE = COUNTABLE | {"career", "successful", "recent", "often"}
 FUTURE = re.compile(r"\b(will|going to)\b", re.IGNORECASE)
-# What a "what" question asks for, read up to the first of these words
-FIELD_ENDS = set("""of at in on by for from during per with to when after before since between that who which
-    scored earned won did does do was is were are has have had""".split())
-FIELDS = set("""points total time times duration average team teams constructor constructors driver drivers position positions
-    place grid number count result results score win wins victories podium podiums pole poles lap laps race races round rounds
-    circuit circuits track season seasons year years date age nationality country championship championships title titles
-    standing standings record stop stops story history career background summary overview""".split())
-
-
-def asked_field(question: str):
-    """The noun a "what" question asks for: speed in "What was X's top speed at Monza?". None when it isn't that shape."""
-    text = re.sub(r"^(\s*)what's\b", r"\1what is", question.lower().replace("’", "'"))
-    text = re.sub(r"\b(kind|sort|type) of ", "", text)  # what kind of year asks for a year
-    match = re.match(r"\s*what (\w+)(.*)", text)
-    if match is None or match.group(1) in ("happened", "do", "does", "did"):
-        return None
-    if match.group(1) not in ("is", "was", "are", "were"):
-        return match.group(1)  # what team, what fuel
-    head = None
-    for word in re.findall(r"[a-z]+", match.group(2).split("'s ")[-1]):
-        if word == "of" and head == "name":
-            head = None  # the name of a circuit is a circuit
-        elif word in FIELD_ENDS:
-            break
-        elif word not in ("the", "a", "an", "his", "her", "their", "its"):
-            head = word
-    return head
+# "how many did they win" names no noun, so there is nothing to check
+VERBS = set("did do does have has had were was are is will can could of".split())
 
 
 def asks_for_missing_field(question: str) -> bool:
+    """
+    Checks on the shape of a question. An allow-list of nouns for "what" questions was tried and
+    dropped: it refused "career tally" and "points haul" on new questions, so measures the tables
+    lack are listed in NOT_IN_DATA instead.
+    """
     counted, role, which = HOW_MANY.search(question), WHO_ROLE.search(question), WHICH_THING.search(question)
     if which is not None and which.group(1).lower() not in CHOOSABLE:
         return True  # which company, which engineer: the tables only pick drivers, teams, races and places
-    field = asked_field(question)
-    if (field is not None and field not in FIELDS) or FUTURE.search(question):
-        return True  # top speed, capacity, a prediction
+    if FUTURE.search(question):
+        return True  # a prediction
     if any(word.lower() not in RANKABLE for word in RANKED.findall(question)):
         return True  # most Instagram followers
+    counted_word = counted.group(1).lower() if counted else None
     # pit stop durations are the one length the tables hold
     return ((NO_MEASURE.search(question) is not None and not re.search(r"\bpit stops?\b", question, re.IGNORECASE))
-            or (counted is not None and counted.group(1).lower() not in COUNTABLE)
+            or (counted_word is not None and counted_word not in COUNTABLE and counted_word not in VERBS)
             or (role is not None and role.group(1).lower() not in ROLES and not role.group(1).isdigit()))
 
 

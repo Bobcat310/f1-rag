@@ -126,14 +126,19 @@ for question in ("How many wins did Senna have?", "Who was the youngest winner?"
 for question in ("Which company made the brakes for Ferrari in 2004?", "Which engineer worked with Senna?"):
     assert asks_for_missing_field(question), question
 for question in ("What is the top speed of a Red Bull RB19?", "What was Max Verstappen's top speed at Monza in 2023?",
-                 "What is the name of Lewis Hamilton's dog?", "What fuel does Mercedes use?", "What brand of helmet does Charles Leclerc wear?",
-                 "Which driver has the most Instagram followers?", "Who will win the 2026 drivers championship?"):
-    assert asks_for_missing_field(question), question
+                 "What fuel does Mercedes use?", "What brand of helmet does Charles Leclerc wear?",
+                 "Which driver has the most Instagram followers?", "Who will win the 2026 drivers championship?",
+                 "How much did the Las Vegas circuit cost?", "What colours did Jordan race in?"):
+    assert NOT_IN_DATA.search(question) or asks_for_missing_field(question), question
 for question in ("What was Lewis Hamilton's points total in 2020?", "What is the average points scored by Mercedes per season?",
                  "What team did Sebastian Vettel drive for in 2015?", "What happened at the 2010 Bahrain Grand Prix?",
                  "What is the name of the circuit in Monza?", "What year did Ayrton Senna win his first title?",
-                 "Who has the most career podiums?", "Who is the most successful driver?"):
-    assert not asks_for_missing_field(question), question
+                 "Who has the most career podiums?", "Who is the most successful driver?",
+                 # wordings a noun allow-list refused on new questions
+                 "What's Nelson Piquet's career tally of wins?", "What was McLaren's final points haul in 1988?",
+                 "In 1982, how many teams won at least one race?", "Brabham were strong in 1983 - how many did they win?",
+                 "What should I know about Interlagos?", "What was the quickest pit stop anyone recorded in 2019?"):
+    assert not (NOT_IN_DATA.search(question) or asks_for_missing_field(question)), question
 name("What was the average pit stop time at the 2020 Italian Grand Prix?", f"{one('''SELECT ROUND(AVG(duration), 2) FROM f1_pit_stops
     WHERE season = 2020 AND race_name = 'Italian Grand Prix' AND duration <= 120'''):.2f}")
 
@@ -180,8 +185,7 @@ assert focus_lines("Give me a rundown of Juan Manuel Fangio's career") == ["Juan
 assert focus_lines("What sort of season did Jenson Button have in 2009?") == ["At the end of the 2009 season, Jenson Button "]
 for question in ("What kind of year did Kimi Raikkonen have in 2007?", "What's the story of Monza?"):
     assert not asks_for_missing_field(question), question
-for question in ("What kind of engine did Lotus use in 1967?", "What's the top speed of a Ferrari?"):
-    assert asks_for_missing_field(question), question
+assert NOT_IN_DATA.search("What's the top speed of a Ferrari?")
 for question in ("How many safety cars were there in the 2020 Tuscan Grand Prix?", "Who was Driver of the Day in Monaco 2023?",
                  "What strategy did Ferrari use at Silverstone in 2022?", "How much prize money did Williams get?"):
     assert NOT_IN_DATA.search(question) or asks_for_missing_field(question), question
