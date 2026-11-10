@@ -4,7 +4,7 @@ A question-answering system over Formula 1 data from 1950 to 2026. It combines t
 
 Each part is built without a framework so it can be measured on its own, and each notebook builds on what the one before it measured.
 
-**Result:** on the latest 30 new questions, written blind to the code, the system answered 19 correctly, gave 5 wrong answers and refused 6. Retrieval alone got 17 right and 12 wrong. An earlier set, worded closer to the system's own phrasing, scored 27 right and 3 wrong. Changes made since the latest run haven't been scored yet.
+**Result:** on the latest 30 new questions, written blind to the code, the system answered 19 correctly, gave 9 wrong answers and refused 2. Retrieval alone got 17 right and 9 wrong. An earlier set, worded closer to the system's own phrasing, scored 27 right and 3 wrong. Changes made since the latest run haven't been scored yet.
 
 ## How it works
 
@@ -39,28 +39,30 @@ flowchart TD
 
 Each evaluation used 30 questions committed after the code and before any run, with live 2026 data through round 18. The same questions ran through the earlier version and the current code, so the two can be compared directly.
 
-The fifth and sixth sets were written by separate agents that saw the schema and the corpus but not the code, the README or any results. Their wording was looser than the four sets before them:
+The fifth to seventh sets were written by separate agents that saw the schema and the corpus but not the code, the README or any results. Their wording was looser than the four sets before them:
 
-| Pipeline | Holdout 4 | Holdout 5 | Holdout 6 |
-|---|---|---|---|
-| SQL only | 12 right, 9 wrong | 10 right, 10 wrong | 12 right, 6 wrong |
-| Vector only | 19 right, 5 wrong | **20 right, 6 wrong** | 17 right, 12 wrong |
-| Hybrid | **27 right, 3 wrong** | 18 right, 9 wrong | **19 right, 5 wrong** |
+| Pipeline | Holdout 4 | Holdout 5 | Holdout 6 | Holdout 7 |
+|---|---|---|---|---|
+| SQL only | 12 right, 9 wrong | 10 right, 10 wrong | 12 right, 6 wrong | 10 right, 7 wrong |
+| Vector only | 19 right, 5 wrong | **20 right, 6 wrong** | 17 right, 12 wrong | 17 right, 9 wrong |
+| Hybrid | **27 right, 3 wrong** | 18 right, 9 wrong | **19 right, 5 wrong** | **19 right, 9 wrong** |
 
-| Holdout 6 by type | SQL | Vector | Hybrid |
+| Holdout 7 by type | SQL | Vector | Hybrid |
 |---|---|---|---|
-| Single fact (8) | 4 | 7 | 7 |
-| Aggregate (9) | 2 | 3 | 2 |
-| Narrative (7) | 0 | 5 | 4 |
-| Unanswerable (6) | 6 | 2 | 6 |
+| Single fact (8) | 3 | 5 | 6 |
+| Aggregate (9) | 1 | 3 | 2 |
+| Narrative (7) | 0 | 6 | 6 |
+| Unanswerable (6) | 6 | 3 | 5 |
 
 On holdout 5, templates declined freer wording such as "altogether", "crowned" or a middle name, and text-to-SQL answered six of those questions wrongly, so the hybrid lost to retrieval alone. The changes that followed, scored on holdout 6, made the hybrid lead again with the fewest wrong answers: templates accept looser wording, pinned sentences answer any open question, and a sentence-backed answer wins over model-written SQL except for rankings.
 
-Holdout 6's six refusals were all answerable questions blocked by a refusal rule I had fitted to earlier sets: a list of nouns a "what" question may ask for. It refused "career tally" and "points haul", so it was replaced by a list of measures no table holds. Two smaller wording gaps were fixed alongside it: "Number of…" counts and a leading "In 2012,". The next blind set will score those changes.
+Holdout 6's six refusals were all answerable questions blocked by a refusal rule I had fitted to earlier sets: a list of nouns a "what" question may ask for. It refused "career tally" and "points haul", so it was replaced by a list of measures no table holds. On holdout 7 that change took the hybrid from 17 right and 5 refused to 19 right and 2 refused, at the cost of one more wrong answer, a count of Mercedes wins that retrieval guessed from two drivers' totals.
+
+Seven of holdout 7's nine wrong answers were aggregates that no template took, so text-to-SQL or retrieval guessed. Templates now also read "total number of" without "the", spans like "between 2000 and 2009", "most often", "finished top of the championship", "on average, how long did a pit stop take", and counts of races, sprints and circuits. A two-digit year right after a place, as in "jerez 97", is read as 1997. A question naming a team and a season pins the constructors table and the team's two leading drivers, unless it asks who or which. Positions on a given lap are refused, since only pit stops record a lap. The next blind set will score these changes.
 
 Earlier frozen sets rose from 14 right to 27, from 21 to 25, from 20 to 26 and from 23 to 27, each measuring a round of changes. Those sets were written in phrasing close to the system's own, so they overstated how it handles new wording.
 
-On holdout 6, search alone found the answer sentence for 8 of 15 questions, and 12 of 15 with pinned sentences.
+On holdout 7, search alone found the answer sentence for 5 of 15 questions, and 10 of 15 with pinned sentences.
 
 Scoring checks that each answer contains the expected fact. Each set ran once, so these scores show direction rather than a precise rate.
 
@@ -94,7 +96,7 @@ Scoring checks that each answer contains the expected fact. Each set ran once, s
 
 ## What I'd do next
 
-1. Score the changes since holdout 6 on a new set written blind to the code.
+1. Score the changes since holdout 7 on a new set written blind to the code.
 2. Add lap-by-lap data from the same API to answer questions about laps led. It's about 7,000 requests, so it means hours under the free rate limit.
 3. Test a larger local model on new questions.
 
@@ -149,7 +151,7 @@ python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
 | `notebooks/` | The project in order, one concept each (see below) |
 | `src/` | Reusable pipeline code |
 | `tests/` | Plain Python checks, including real SQL the model produced |
-| `eval/` | 288 questions across 12 sets, every recorded result, and the runner that scores a set |
+| `eval/` | 318 questions across 14 sets, every recorded result, and the runner that scores a set |
 
 | Notebook | Topic | Main finding |
 |---|---|---|
@@ -163,7 +165,7 @@ python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
 | 07 | Live data | 15 more rounds of 2026 through a validated merge |
 | 08 | Final evaluation | Retrieval, generation and end-to-end scored separately |
 
-Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout6_*.json`.
+Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout7_*.json`.
 
 ## Stack
 
