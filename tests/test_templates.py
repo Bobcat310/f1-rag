@@ -116,6 +116,11 @@ name("Who has scored the most points?", one("""SELECT name FROM (SELECT driver_n
     UNION ALL SELECT driver_name, points FROM f1_sprint_results) GROUP BY 1 ORDER BY SUM(points) DESC LIMIT 1"""))
 assert "so far" in template_answer("Who has the most points in 2026?")["answer"]
 declined("Who scored the most sprint points in 2023?")
+number("Number of pole positions for Jim Clark?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'clark' AND grid = 1")
+number("In 1988, how many wins did Ayrton Senna have?", "SELECT COUNT(*) FROM f1_results WHERE driver_id = 'senna' AND season = 1988 AND position = 1")
+name("In the 1970s, which driver stood on the podium the most times?", one("""SELECT driver_name FROM f1_results
+    WHERE season BETWEEN 1970 AND 1979 AND position <= 3 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"""))
+declined("In what year did Senna win?")
 
 for question in ("How many fans watched the 2019 British Grand Prix?", "Who was the team principal of Red Bull in 2015?",
                  "How tall is Lando Norris?", "How much does a Ferrari engine cost?"):

@@ -11,7 +11,9 @@ from src.text_to_sql import con, words
 
 SEASON = re.compile(r"\b(19[5-9]\d|20[0-2]\d)\b")
 DECADE = re.compile(r"\b(19[5-9]|20[0-2])0s\b")
-COUNT = re.compile(r"^(how many|what (is|was) the (total )?number of)\b")
+COUNT = re.compile(r"^(how many|(what (is|was) )?the (total )?number of|number of)\b")
+# "In 2012, how many..." puts the period first, and every template reads the question from its start
+LEADING_PERIOD = re.compile(r"^(in|across|during|over|throughout) (the )?((19[5-9]|20[0-2])\ds?) ")
 WINNER = re.compile(r"^(who (won|was the winner|finished first|came first|took (the )?(win|victory))|which (driver|team|constructor) won)\b")
 POLE = re.compile(r"^(who|which driver)\b.*\bpole\b")
 PLACES = {"second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10}
@@ -41,7 +43,7 @@ RACE_FILLER = SHARED_FILLER | set("""who which what driver team constructor won 
 COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all time times grands sprint sprints win wins won victory victories
     pole poles position positions podium podiums finish finishes finished not fail failed retire retired
     retirement retirements dnf dnfs points score scored take took get got claim claimed achieve achieved
-    earn earned start started secure secured during altogether rack racked up""".split())
+    earn earned start started secure secured during altogether rack racked up stood stand""".split())
 MOST_FILLER = COUNT_FILLER | set("who which driver team constructor most".split())
 CIRCUIT_FILLER = SHARED_FILLER | set("""which track tracks circuit circuits venue venues has have had hosted staged held
     most world championship grands""".split())
@@ -433,6 +435,9 @@ def template_answer(question: str) -> dict:
     """An answer with its SQL, or None when the question doesn't fit a template exactly."""
     # "Formula 1" would leave a stray 1, and "more ... than any other" is "most"
     text = MORE_THAN_ANY.sub(r"most\1", plain(question).replace("formula 1", "formula one")).strip()
+    lead = LEADING_PERIOD.match(text)
+    if lead:
+        text = f"{text[lead.end():]} in {lead.group(2) or ''}{lead.group(3)}"
     season = SEASON.search(text)
     if AVERAGE_PIT.search(text):
         return average_pit_answer(text)

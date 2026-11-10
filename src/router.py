@@ -9,7 +9,7 @@ from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, asks_for_mi
 
 
 NARRATIVE = re.compile(r"^\s*(tell me|describe|explain|why|how did|how was|compare|summari[sz]e|what happened)", re.IGNORECASE)
-FACT = re.compile(r"\b(how many|who|which|most|average|total|what is the|fastest|oldest|youngest)\b", re.IGNORECASE)
+FACT = re.compile(r"\b(how many|number of|tally|who|which|most|average|total|what is the|fastest|oldest|youngest)\b", re.IGNORECASE)
 
 
 def route(question: str) -> str:
