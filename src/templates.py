@@ -11,7 +11,11 @@ from src.text_to_sql import con, words
 
 SEASON = re.compile(r"\b(19[5-9]\d|20[0-2]\d)\b")
 DECADE = re.compile(r"\b(19[5-9]|20[0-2])0s\b")
-COUNT = re.compile(r"^(how many|(what (is|was) )?the (total )?number of|number of)\b")
+SPAN = re.compile(r"\b(between|from) (19[5-9]\d|20[0-2]\d) (and|to|until) (19[5-9]\d|20[0-2]\d)\b")
+COUNT = re.compile(r"^(how many|(what (is|was) )?(the )?(total )?number of)\b")
+# "how many races in 2024" counts the events themselves, not a driver's results
+EVENTS = re.compile(r"^(how many|(what (is|was) )?(the )?(total )?number of)( different)? (races|grands prix|sprints|sprint races|rounds"
+                    r"|circuits|tracks|venues)\b")
 # "In 2012, how many..." puts the period first, and every template reads the question from its start
 LEADING_PERIOD = re.compile(r"^(in|across|during|over|throughout) (the )?((19[5-9]|20[0-2])\ds?) ")
 WINNER = re.compile(r"^(who (won|was the winner|finished first|came first|took (the )?(win|victory))|which (driver|team|constructor) won)\b")
@@ -23,8 +27,10 @@ MOST = re.compile(r"^(who|which (driver|team|constructor))\b.*\bmost\b")
 CIRCUIT_MOST = re.compile(r"^which (track|circuit|venue)\b.*\bmost\b")
 MORE_THAN_ANY = re.compile(r"\bmore\b(.*)\bthan any other( \w+)?$")
 PIT_STOPS = re.compile(r"\bpit stops?\b")
-AVERAGE_PIT = re.compile(r"^(what (is|was) )?(the )?(average|mean) pit stop\b")
-CHAMPION = re.compile(r"^(who|which (driver|team|constructor)) (won|was|became|took|claimed)\b.*\b(champion|championship|title)\b")
+AVERAGE_PIT = re.compile(r"^((what (is|was) )?(the )?(average|mean) pit stop"
+                         r"|(on average )?how long (did|does|do|was|is) ((a|an|the) )?(average )?pit stops?( take)?)\b")
+CHAMPION = re.compile(r"^(who|which (driver|team|constructor)) (won|was|became|took|claimed|topped|(finished|came|ended) (top|first))\b"
+                      r".*\b(champion|championship|title)\b")
 
 DNF = "status <> 'Finished' AND status <> 'Lapped' AND status NOT LIKE '+%'"
 # (pattern on the question, filter, singular label, plural label)
@@ -43,14 +49,16 @@ RACE_FILLER = SHARED_FILLER | set("""who which what driver team constructor won 
 COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all time times grands sprint sprints win wins won victory victories
     pole poles position positions podium podiums finish finishes finished not fail failed retire retired
     retirement retirements dnf dnfs points score scored take took get got claim claimed achieve achieved
-    earn earned start started secure secured during altogether rack racked up stood stand""".split())
-MOST_FILLER = COUNT_FILLER | set("who which driver team constructor most".split())
+    earn earned start started secure secured during altogether rack racked up stood stand collect collected""".split())
+MOST_FILLER = COUNT_FILLER | set("who which driver team constructor most often frequently".split())
+EVENT_FILLER = SHARED_FILLER | set("""how many what number total different sprint sprints round rounds circuit circuits track tracks
+    venue venues there been held run staged hosted season calendar championship world""".split())
 CIRCUIT_FILLER = SHARED_FILLER | set("""which track tracks circuit circuits venue venues has have had hosted staged held
     most world championship grands""".split())
 PIT_FILLER = SHARED_FILLER | set("how many pit stop stops make made take took during total all there".split())
-AVERAGE_FILLER = PIT_FILLER | set("what average mean time duration length".split())
+AVERAGE_FILLER = PIT_FILLER | set("what average mean time duration length how long does do".split())
 TITLE_FILLER = SHARED_FILLER | set("""who which driver team constructor constructors drivers won was became took
-    claimed crowned world champion championship title""".split())
+    claimed crowned world champion championship title topped top first ended finished came""".split())
 
 
 def plain(text: str) -> str:
@@ -71,7 +79,8 @@ def quoted(value: str) -> str:
 
 def load_drivers() -> dict:
     """Full names, plus a surname when it points to one driver or to the only winner with it."""
-    rows = con.execute("SELECT driver_name, MAX(CASE WHEN position = 1 THEN 1 ELSE 0 END) FROM f1_results GROUP BY driver_name").fetchall()
+    rows = con.execute("""SELECT driver_name, MAX(CASE WHEN position = 1 THEN 1 ELSE 0 END) FROM f1_results
+                          GROUP BY driver_name ORDER BY driver_name""").fetchall()
     by_surname = {}
     for name, won in rows:
         by_surname.setdefault(plain(name).split()[-1], []).append((name, won))
@@ -182,6 +191,10 @@ def title_answer(text: str, season: int) -> dict:
 
 def period_filter(text: str) -> tuple:
     """Returns (SQL condition, phrase for the answer, the text with the period removed)."""
+    span = SPAN.search(text)
+    if span:
+        start, end = sorted((int(span.group(2)), int(span.group(4))))
+        return f"season BETWEEN {start} AND {end}", f" from {start} to {end}", text.replace(span.group(0), "")
     decade = DECADE.search(text)
     season = SEASON.search(text)
     if decade:
@@ -372,6 +385,18 @@ def load_circuits() -> dict:
 CIRCUITS = load_circuits()
 RACE_NAMES = {key: name for (name,) in con.execute("SELECT DISTINCT race_name FROM f1_races").fetchall()
               for key in (plain(name), plain(name).replace("grand prix", "gp"))}
+LAST_SEASON = con.execute("SELECT MAX(season) FROM f1_races").fetchone()[0]
+# "jerez 97" or "monaco 88": a two-digit year only counts right after a place, where it can't be a count
+PLACE_WORDS = ({key for key in CIRCUITS if " " not in key}
+               | {key.removesuffix(" grand prix") for key in RACE_NAMES if key.count(" ") == 2 and key.endswith(" grand prix")})
+SHORT_YEAR = re.compile(r"\b([a-z]+) (\d\d)\b")
+
+
+def spell_years(text: str) -> str:
+    def full(match):
+        year = int(match.group(2)) + (1900 if int(match.group(2)) >= 50 else 2000)
+        return f"{match.group(1)} {year}" if match.group(1) in PLACE_WORDS and year <= LAST_SEASON else match.group(0)
+    return SHORT_YEAR.sub(full, text)
 
 
 def circuit_most_answer(text: str) -> dict:
@@ -387,6 +412,44 @@ def circuit_most_answer(text: str) -> dict:
     return {"answer": f"{rows[0][0]} hosted the most Formula 1 races{when}, with {rows[0][1]}.", "sql": sql}
 
 
+def event_count_answer(text: str) -> dict:
+    """Races or sprints in a period or at a place, or how many circuits one grand prix used."""
+    if any(re.search(m[0], text) for m in METRICS):
+        return None  # wins or poles are a driver's results, which count_answer handles
+    period, when, rest = period_filter(text)
+    race, rest = find_name(rest, RACE_NAMES)
+    circuit, rest = (None, rest) if race else find_name(rest, CIRCUITS)
+    if set(rest.split()) - EVENT_FILLER or not (period or race or circuit):
+        return None
+    filters = [f"r.{period}"] if period else []
+    if race:
+        filters.append(f"r.race_name = {quoted(race)}")
+    if circuit:
+        filters.append(f"c.circuit_name = {quoted(circuit)}")
+    where = " AND ".join(filters)
+    joins = "f1_races r JOIN f1_circuits c USING (circuit_id)"
+    if re.search(r"\b(circuits|tracks|venues)\b", text):
+        if not race or circuit:
+            return None
+        sql = f"""SELECT COUNT(DISTINCT circuit_id) FROM {joins}
+                  WHERE {where} AND (r.season, r.round) IN (SELECT season, round FROM f1_results)"""
+        value = con.execute(sql).fetchone()[0]
+        return {"answer": f"The {race} has been held at {value} different circuit{'s' if value != 1 else ''}{when}.", "sql": sql} if value else None
+    sprint = bool(re.search(r"\bsprints?\b", text))
+    table = "f1_sprint_results" if sprint else "f1_results"
+    sql = f"SELECT COUNT(*) FROM {joins} WHERE {where} AND (r.season, r.round) IN (SELECT season, round FROM {table})"
+    value = con.execute(sql).fetchone()[0]
+    if not value:
+        return None
+    kind = ("sprint" if sprint else "race") + ("" if value == 1 else "s")
+    place = f" at the {race}" if race else f" at {circuit}" if circuit else ""
+    season = SEASON.search(when)
+    if season and "BETWEEN" not in period and not (sprint or race or circuit) and season_running(int(season.group(1))):
+        planned = con.execute(f"SELECT COUNT(*) FROM f1_races WHERE {period}").fetchone()[0]
+        return {"answer": f"{value} of the {planned} races on the calendar{when} have been run so far.", "sql": sql}
+    return {"answer": f"There {'was' if value == 1 else 'were'} {value} {kind}{place}{when}.", "sql": sql}
+
+
 def named_only(names: dict, question: str) -> dict:
     """In free text, a lone surname counts only when capitalised, so "I'd love" isn't John Love. All lower case is taken as typed."""
     if question == question.lower():
@@ -400,21 +463,33 @@ def career_lines(text: str, question: str = "") -> list:
     circuit, text = find_name(text, CIRCUITS)
     if circuit:
         return [f"{circuit} in "]
-    subjects = []
+    original, subjects = text, []
     for names in (named_only(DRIVERS, question), CONSTRUCTORS):
         subject, text = find_name(text, names)
         while subject:
             subjects.append(subject)
             subject, text = find_name(text, names)
+    # find_name takes longest names first, so put them back in the order the question gives them
+    subjects.sort(key=lambda s: min([original.find(w) for w in plain(s).split() if f" {w} " in f" {original} "] or [len(original)]))
     if "Lotus" in subjects:
         at = subjects.index("Lotus")
         subjects[at:at + 1] = ["Team Lotus", "Lotus", "Lotus F1"]
     return [f"{subject} raced in Formula 1 " for subject in subjects]
 
 
+def team_season_lines(team: str, year: int, when: str) -> list:
+    """A team's place in the constructors table, then its two highest-scoring drivers that season."""
+    entries = con.execute(f"""SELECT constructor FROM f1_constructor_standings WHERE season = ? AND {team_filter(team)}
+                              ORDER BY points DESC LIMIT 2""", [year]).fetchall()
+    drivers = con.execute(f"""SELECT driver_name FROM f1_results WHERE season = ? AND {team_filter(team)}
+                              GROUP BY 1 ORDER BY SUM(points) DESC LIMIT 2""", [year]).fetchall()
+    return ([f"In the {year} constructors championship, {entry} " for (entry,) in entries]
+            + [f"{when} the {year} season, {driver} " for (driver,) in drivers])
+
+
 def focus_lines(question: str) -> list:
     """Corpus sentence starts for a race the question names and a driver in it, or else a career overview."""
-    text = plain(question)
+    text = spell_years(plain(question))
     season = SEASON.search(text)
     if season is None:
         return career_lines(text, question)
@@ -422,11 +497,15 @@ def focus_lines(question: str) -> list:
     round_no, race_name, rest = find_race(text.replace(season.group(0), ""), year)
     driver, _ = find_name(rest, named_only(DRIVERS, question))
     if round_no is None:
-        if driver is None:
-            return []
         last_round = con.execute("SELECT MAX(round) FROM f1_results WHERE season = ?", [year]).fetchone()[0]
         when = f"After round {last_round} of" if season_running(year) else "At the end of"
-        return [f"{when} the {year} season, {driver} "]
+        if driver:
+            return [f"{when} the {year} season, {driver} "]
+        circuit, rest = find_name(rest, CIRCUITS)  # the Red Bull Ring isn't Red Bull
+        # "who was Mercedes' reserve driver" would pick a name from the team's drivers
+        asks_who = re.match(r"(who|which)\b", text) is not None
+        team, _ = (None, rest) if circuit or asks_who else find_name(rest, CONSTRUCTORS)
+        return team_season_lines(team, year, when) if team else []
     summary = f"The {year} {race_name} "
     return [f"In the {year} {race_name}, {driver} ", summary] if driver else [summary]
 
@@ -434,7 +513,7 @@ def focus_lines(question: str) -> list:
 def template_answer(question: str) -> dict:
     """An answer with its SQL, or None when the question doesn't fit a template exactly."""
     # "Formula 1" would leave a stray 1, and "more ... than any other" is "most"
-    text = MORE_THAN_ANY.sub(r"most\1", plain(question).replace("formula 1", "formula one")).strip()
+    text = MORE_THAN_ANY.sub(r"most\1", spell_years(plain(question).replace("formula 1", "formula one"))).strip()
     lead = LEADING_PERIOD.match(text)
     if lead:
         text = f"{text[lead.end():]} in {lead.group(2) or ''}{lead.group(3)}"
@@ -442,7 +521,10 @@ def template_answer(question: str) -> dict:
     if AVERAGE_PIT.search(text):
         return average_pit_answer(text)
     if COUNT.search(text):
-        return pit_answer(text) if PIT_STOPS.search(text) else count_answer(text)
+        if PIT_STOPS.search(text):
+            return pit_answer(text)
+        # "how many races has Hamilton won" is a driver's count, so it falls through
+        return (event_count_answer(text) if EVENTS.search(text) else None) or count_answer(text)
     if CIRCUIT_MOST.search(text):
         return circuit_most_answer(text)
     if MOST.search(text):

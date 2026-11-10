@@ -71,7 +71,9 @@ NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|la
                          # measures and belongings no table holds
                          r"|top speeds?|speeds?|capacity|seating|weigh(s|t|ts)?|costs?|price[sd]?|money|colou?rs?|liver(y|ies)"
                          r"|fuel|followers|social media|instagram|helmets?)\b"
-                         r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b", re.IGNORECASE)
+                         r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b"
+                         # running order lap by lap; pit stops record their lap, so those stay answerable
+                         r"|^(?!.*\bpit).*\b(lap \d+|lap[- ]by[- ]lap)\b", re.IGNORECASE)
 
 # SQL can only answer for things the tables hold, so these list what they hold
 HOW_MANY = re.compile(r"\bhow many (\w+)", re.IGNORECASE)

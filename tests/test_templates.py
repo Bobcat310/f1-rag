@@ -197,4 +197,43 @@ for question in ("How many safety cars were there in the 2020 Tuscan Grand Prix?
 assert not asks_for_missing_field("How long was the fastest pit stop in 2023?")
 assert asks_for_missing_field("How long is the Monza circuit?")
 
+# wording from the seventh blind set
+number("Total number of race wins for Williams, all time?",
+       "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor LIKE 'Williams%' AND position = 1")
+name("Who collected the most podium finishes between 2000 and 2009?", "Michael Schumacher")
+name("Who collected the most podium finishes between 2000 and 2009?", "with {:g}.".format(one(
+    "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Michael Schumacher' AND season BETWEEN 2000 AND 2009 AND position <= 3")))
+name("Which team started from pole most often during the 2010s?", "Mercedes")
+name("Which constructor finished top of the 1975 constructors' championship?", "Ferrari won the 1975 constructors")
+declined("Who finished second in the 2010 championship?")
+number("On average, how long did a pit stop take at the 2018 Hungarian Grand Prix?",
+       "SELECT ROUND(AVG(duration), 2) FROM f1_pit_stops WHERE season = 2018 AND race_name = 'Hungarian Grand Prix' AND duration <= 120")
+name("Who won the Monaco 88 race?", "Alain Prost")
+assert focus_lines("jerez 97, the title decider - who was on pole?") == ["The 1997 European Grand Prix "]
+declined("How many 97 wins did Senna have?")  # a two-digit number counts as a year only after a place
+
+# counting the events themselves
+number("how many sprints were there in the 2024 season", "SELECT COUNT(DISTINCT round) FROM f1_sprint_results WHERE season = 2024")
+number("How many circuits has the French Grand Prix been held at?",
+       "SELECT COUNT(DISTINCT circuit_id) FROM f1_races WHERE race_name = 'French Grand Prix'")
+number("How many races were held at Monza?",
+       "SELECT COUNT(*) FROM f1_races WHERE circuit_id = 'monza' AND (season, round) IN (SELECT season, round FROM f1_results)")
+number("How many races were there in 1988?", "SELECT COUNT(*) FROM f1_races WHERE season = 1988")
+name("How many races were there in 2026?", "have been run so far")
+name("How many races has Lewis Hamilton won?", "Lewis Hamilton had 106 wins")  # still a driver's count
+
+# a team and a season pin the constructors table and its two leading drivers
+assert focus_lines("How did Ferrari's 1979 season go?") == [
+    "In the 1979 constructors championship, Ferrari ", "At the end of the 1979 season, Jody Scheckter ",
+    "At the end of the 1979 season, Gilles Villeneuve "]
+assert focus_lines("Who won at the Red Bull Ring in 2020?") == []
+assert focus_lines("Who was Mercedes' reserve driver in the 2022 season?") == []
+assert focus_lines("Compare Lewis Hamilton and Max Verstappen.") == [
+    "Lewis Hamilton raced in Formula 1 ", "Max Verstappen raced in Formula 1 "]
+assert focus_lines("Vettel or Alonso - whose career was more successful?") == [
+    "Sebastian Vettel raced in Formula 1 ", "Fernando Alonso raced in Formula 1 "]
+
+assert NOT_IN_DATA.search("What position was Lewis Hamilton running in on lap 30 of the 2021 Sao Paulo Grand Prix?")
+assert not NOT_IN_DATA.search("On which lap did Hamilton make his first pit stop in the 2021 Sao Paulo Grand Prix?")
+
 print("template checks passed")
