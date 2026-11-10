@@ -24,7 +24,7 @@
   {"id": "test10", "split": "test", "kind": "join", "question": "Which country has hosted the most races?", "truth_sql": "SELECT ci.country FROM f1_races c JOIN f1_circuits ci USING (circuit_id) GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
   {"id": "test11", "split": "test", "kind": "join", "question": "Who was the youngest driver to win a race?", "truth_sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position=1 ORDER BY c.date - d.dob LIMIT 1"},
   {"id": "test12", "split": "test", "kind": "join", "question": "Drivers of which nationality have won the most races?", "truth_sql": "SELECT d.nationality FROM f1_results r JOIN f1_drivers d USING (driver_id) WHERE r.position=1 GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1"},
-  {"id": "test13", "split": "test", "kind": "unanswerable", "question": "How long was the fastest pit stop at the 2022 Spanish Grand Prix?", "truth_sql": null},
+  {"id": "test13", "split": "test", "kind": "aggregate", "question": "How long was the fastest pit stop at the 2022 Spanish Grand Prix?", "truth_sql": "SELECT MIN(duration) FROM f1_pit_stops WHERE season=2022 AND race_name='Spanish Grand Prix'"},
   {"id": "test14", "split": "test", "kind": "unanswerable", "question": "Which tyre compound did Lewis Hamilton start on at the 2021 British Grand Prix?", "truth_sql": null},
 
   {"id": "test2_01", "split": "test2", "kind": "near-template", "question": "How many races did Nigel Mansell win?", "truth_sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name='Nigel Mansell' AND position=1"},
