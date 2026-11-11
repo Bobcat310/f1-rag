@@ -13,3 +13,4 @@ torch==2.13.0
 transformers==5.14.1
 umap-learn==0.5.12
 rank_bm25==0.2.2
+gradio==6.29.1

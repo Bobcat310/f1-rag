@@ -138,6 +138,8 @@ python tests/test_live_data.py
 python tests/test_text_gen.py
 ```
 
+For a web page that shows each answer's path, SQL and sources, run `python app.py` and open http://127.0.0.1:7860. `deploy/README.md` explains how to put it on a free Hugging Face Space.
+
 Score a question set with SQL only, vector only and the hybrid. `--code` points at another checkout to score an earlier version on the same questions:
 
 ```bash
