@@ -171,4 +171,4 @@ Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afte
 
 ## Stack
 
-DuckDB for analytical SQL, ChromaDB for vectors, `rank_bm25` for keyword search, `all-MiniLM-L6-v2` for embeddings and Ollama with `llama3.2:3b` for generation. Data comes from Kaggle and the free [Jolpica API](https://api.jolpi.ca/ergast/f1/).
+DuckDB for analytical SQL, ChromaDB for vectors, `rank_bm25` for keyword search, `all-MiniLM-L6-v2` for embeddings and Ollama with `llama3.2:3b` for generation. Data comes from the Kaggle dataset "Formula 1 Complete History (1950–2026)", licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), and the free [Jolpica API](https://api.jolpi.ca/ergast/f1/).

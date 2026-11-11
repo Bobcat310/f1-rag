@@ -19,4 +19,6 @@ It runs `llama3.2:3b` through Ollama on this Space's free CPU, so answers that n
 
 Code, method and evaluation: https://github.com/Bobcat310/f1-rag
 
-Data: the Kaggle dataset "Formula 1 Complete History" and the [Jolpica API](https://api.jolpi.ca/ergast/f1/), frozen at round 18 of 2026. Not affiliated with Formula 1.
+## Data
+
+The Kaggle dataset "Formula 1 Complete History (1950–2026)", licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It was loaded into DuckDB, source names were cleaned, and the tables were turned into sentences for search. The 2026 season, sprints and pit stops come from the [Jolpica API](https://api.jolpi.ca/ergast/f1/). The data is frozen at round 18 of 2026. Not affiliated with Formula 1.

@@ -105,9 +105,11 @@ with gr.Blocks(title="F1 RAG") as demo:
     route = gr.HTML()
     sql = gr.Code(label="SQL", language="sql", interactive=False, visible=False)
     sources = gr.HTML()
-    gr.Markdown(f"Data from the Kaggle dataset \"Formula 1 Complete History\" and the "
-                f"[Jolpica API](https://api.jolpi.ca/ergast/f1/), frozen at round {LAST_ROUND} of {LAST_SEASON}. "
-                "Not affiliated with Formula 1. Answers come from a small model and can be wrong.")
+    gr.Markdown(f"Data: the Kaggle dataset \"Formula 1 Complete History (1950–2026)\", licensed "
+                "[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), loaded into DuckDB, cleaned and turned into "
+                f"sentences, with the {LAST_SEASON} season and pit stops from the [Jolpica API](https://api.jolpi.ca/ergast/f1/). "
+                f"Frozen at round {LAST_ROUND} of {LAST_SEASON}. Not affiliated with Formula 1. "
+                "Answers come from a small model and can be wrong.")
 
     # One question at a time across both triggers: a second model call on a 2 CPU machine would slow both
     gr.on([submit.click, question.submit], respond, inputs=question, outputs=[answer, route, sql, sources],
