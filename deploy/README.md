@@ -1,6 +1,8 @@
 # Deploying the demo
 
-The demo is a Gradio app (`app.py`) running in a Hugging Face Docker Space on the free CPU tier, with Ollama and `llama3.2:3b` in the same container, so it's the same pipeline the evaluations measured.
+> **Hosting note (November 2026):** Hugging Face now requires a PRO plan to host Gradio and Docker Spaces, even on the free CPU tier. The public page is therefore a static Space of recorded answers (see [Static showcase](#static-showcase)). The Docker setup below still works for a PRO account or any machine with Docker.
+
+The demo is a Gradio app (`app.py`) built to run in a Hugging Face Docker Space on CPU, with Ollama and `llama3.2:3b` in the same container, so it's the same pipeline the evaluations measured.
 
 ## Run it locally first
 
@@ -59,3 +61,18 @@ To update it later, rerun steps 3 and 4.
 | `deploy/space/README.md` | The Space's card, with the settings Hugging Face reads |
 | `deploy/space/requirements-app.txt` | Runtime dependencies only |
 | `deploy/build_space.py` | Builds `deploy/build/`, the folder to upload |
+
+## Static showcase
+
+Static Spaces are free. The page at https://huggingface.co/spaces/humzanoor310/f1-rag shows every eval question as the current code answered it, with its route, SQL and sources, plus the frozen holdout scores. It runs no model.
+
+To refresh it after a code change or a new holdout, with Ollama running:
+
+```bash
+rm showcase/answers.jsonl             # record from scratch; keep it to resume an interrupted run
+python showcase/record.py             # about 30 minutes for 325 questions on a laptop CPU
+python showcase/build_site.py         # writes showcase/site/data.js
+hf upload humzanoor310/f1-rag showcase/site . --repo-type=space
+```
+
+Open `showcase/site/index.html` straight from disk to check it first. A link like `#holdout7_21` opens one answer.

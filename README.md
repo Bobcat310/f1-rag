@@ -6,6 +6,8 @@ Each part is built without a framework so it can be measured on its own, and eac
 
 **Result:** on the latest 30 new questions, written blind to the code, the system answered 19 correctly, gave 9 wrong answers and refused 2. Retrieval alone got 17 right and 9 wrong. An earlier set, worded closer to the system's own phrasing, scored 27 right and 3 wrong. Changes made since the latest run haven't been scored yet.
 
+**See it:** every recorded answer, with its route, SQL and sources, beside the frozen scores: https://huggingface.co/spaces/humzanoor310/f1-rag
+
 ## How it works
 
 ```mermaid
@@ -138,7 +140,7 @@ python tests/test_live_data.py
 python tests/test_text_gen.py
 ```
 
-For a web page that shows each answer's path, SQL and sources, run `python app.py` and open http://127.0.0.1:7860. `deploy/README.md` explains how to put it on a free Hugging Face Space.
+For a web page that shows each answer's path, SQL and sources, run `python app.py` and open http://127.0.0.1:7860. `deploy/README.md` covers hosting it, and the static showcase that is published instead.
 
 Score a question set with SQL only, vector only and the hybrid. `--code` points at another checkout to score an earlier version on the same questions:
 
@@ -153,6 +155,9 @@ python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
 | `notebooks/` | The project in order, one concept each (see below) |
 | `src/` | Reusable pipeline code |
 | `tests/` | Plain Python checks, including real SQL the model produced |
+| `app.py` | The Gradio app: ask anything and see the route, SQL and sources |
+| `showcase/` | Records every eval answer and builds the static page published on Hugging Face |
+| `deploy/` | Docker setup for running the app in a Hugging Face Space |
 | `eval/` | 318 questions across 14 sets, every recorded result, and the runner that scores a set |
 
 | Notebook | Topic | Main finding |
