@@ -4,7 +4,7 @@ A question-answering system over Formula 1 data from 1950 to 2026. It combines t
 
 Each part is built without a framework so it can be measured on its own, and each notebook builds on what the one before it measured.
 
-**Result:** on the latest 30 new questions, written blind to the code, the system answered 19 correctly, gave 9 wrong answers and refused 2. Retrieval alone got 17 right and 9 wrong. An earlier set, worded closer to the system's own phrasing, scored 27 right and 3 wrong. Changes made since the latest run haven't been scored yet.
+**Result:** on the latest 30 new questions, written blind to the code, the system answered 17 correctly, gave 8 wrong answers and refused 5. Retrieval alone did better on that set, with 20 right and 7 wrong. Across the four blind sets the hybrid scored 17 to 19 right. An earlier set, worded closer to the system's own phrasing, scored 27 right and 3 wrong. Changes made since the latest run haven't been scored on a blind set yet.
 
 **See it:** every recorded answer, with its route, SQL and sources, beside the frozen scores: https://huggingface.co/spaces/humzanoor310/f1-rag
 
@@ -41,30 +41,42 @@ flowchart TD
 
 Each evaluation used 30 questions committed after the code and before any run, with live 2026 data through round 18. The same questions ran through the earlier version and the current code, so the two can be compared directly.
 
-The fifth to seventh sets were written by separate agents that saw the schema and the corpus but not the code, the README or any results. Their wording was looser than the four sets before them:
+The fifth to eighth sets were written by separate agents that saw the schema and the corpus but not the code, the README or any results. Their wording was looser than the four sets before them:
 
-| Pipeline | Holdout 4 | Holdout 5 | Holdout 6 | Holdout 7 |
-|---|---|---|---|---|
-| SQL only | 12 right, 9 wrong | 10 right, 10 wrong | 12 right, 6 wrong | 10 right, 7 wrong |
-| Vector only | 19 right, 5 wrong | **20 right, 6 wrong** | 17 right, 12 wrong | 17 right, 9 wrong |
-| Hybrid | **27 right, 3 wrong** | 18 right, 9 wrong | **19 right, 5 wrong** | **19 right, 9 wrong** |
+| Pipeline | Holdout 4 | Holdout 5 | Holdout 6 | Holdout 7 | Holdout 8 |
+|---|---|---|---|---|---|
+| SQL only | 12 right, 9 wrong | 10 right, 10 wrong | 12 right, 6 wrong | 10 right, 7 wrong | 11 right, 4 wrong |
+| Vector only | 19 right, 5 wrong | **20 right, 6 wrong** | 17 right, 12 wrong | 17 right, 9 wrong | **20 right, 7 wrong** |
+| Hybrid | **27 right, 3 wrong** | 18 right, 9 wrong | **19 right, 5 wrong** | **19 right, 9 wrong** | 17 right, 8 wrong |
 
-| Holdout 7 by type | SQL | Vector | Hybrid |
+| Holdout 8 by type | SQL | Vector | Hybrid |
 |---|---|---|---|
-| Single fact (8) | 3 | 5 | 6 |
-| Aggregate (9) | 1 | 3 | 2 |
-| Narrative (7) | 0 | 6 | 6 |
-| Unanswerable (6) | 6 | 3 | 5 |
+| Single fact (8) | 2 | 7 | 6 |
+| Aggregate (9) | 4 | 3 | 3 |
+| Narrative (7) | 0 | 6 | 5 |
+| Unanswerable (6) | 5 | 4 | 3 |
 
 On holdout 5, templates declined freer wording such as "altogether", "crowned" or a middle name, and text-to-SQL answered six of those questions wrongly, so the hybrid lost to retrieval alone. The changes that followed, scored on holdout 6, made the hybrid lead again with the fewest wrong answers: templates accept looser wording, pinned sentences answer any open question, and a sentence-backed answer wins over model-written SQL except for rankings.
 
 Holdout 6's six refusals were all answerable questions blocked by a refusal rule I had fitted to earlier sets: a list of nouns a "what" question may ask for. It refused "career tally" and "points haul", so it was replaced by a list of measures no table holds. On holdout 7 that change took the hybrid from 17 right and 5 refused to 19 right and 2 refused, at the cost of one more wrong answer, a count of Mercedes wins that retrieval guessed from two drivers' totals.
 
-Seven of holdout 7's nine wrong answers were aggregates that no template took, so text-to-SQL or retrieval guessed. Templates now also read "total number of" without "the", spans like "between 2000 and 2009", "most often", "finished top of the championship", "on average, how long did a pit stop take", and counts of races, sprints and circuits. A two-digit year right after a place, as in "jerez 97", is read as 1997. A question naming a team and a season pins the constructors table and the team's two leading drivers, unless it asks who or which. Positions on a given lap are refused, since only pit stops record a lap. The next blind set will score these changes.
+Seven of holdout 7's nine wrong answers were aggregates that no template took, so text-to-SQL or retrieval guessed. Templates now also read "total number of" without "the", spans like "between 2000 and 2009", "most often", "finished top of the championship", "on average, how long did a pit stop take", and counts of races, sprints and circuits. A two-digit year right after a place, as in "jerez 97", is read as 1997. A question naming a team and a season pins the constructors table and the team's two leading drivers, unless it asks who or which. Positions on a given lap are refused, since only pit stops record a lap.
+
+Holdout 8 scored those changes and found no gain: the hybrid went from 18 right to 17, and retrieval alone beat it again. The one question that changed was "During his years at Ferrari, how many times did Rubens Barrichello finish on the podium?". The older code returned its model-written SQL, 55. The newer code preferred an answer backed by a sentence, and the only sentence held his career total, 68: grounded in a true fact, but for a wider question than the one asked. The set also showed the model inventing a spouse for Nico Rosberg, refusals triggered by rain in a scene-setting clause and by "world championship races", and two unanswerable questions answered from a nearby sentence.
+
+The changes since then:
+
+- Refusals read only the clauses that ask something.
+- Personal life is on the missing-data list.
+- A name check rejects any answer naming someone the data and the question don't.
+- Templates read opening clauses ("Settling a bet here:", "During his years at Ferrari,"), open-ended periods ("since 2021") and more title wording.
+- New templates answer counts of different drivers or teams, the fastest pit stop, the youngest and oldest, rankings at one circuit or for one team, by race entries or by championships, and name every leader in a tie.
+
+Across all 348 questions, template answers rose from 138 right to 160 right, still with none wrong. The next blind set will score them.
 
 Earlier frozen sets rose from 14 right to 27, from 21 to 25, from 20 to 26 and from 23 to 27, each measuring a round of changes. Those sets were written in phrasing close to the system's own, so they overstated how it handles new wording.
 
-On holdout 7, search alone found the answer sentence for 5 of 15 questions, and 10 of 15 with pinned sentences.
+On holdout 8, search alone found the answer sentence for 8 of 15 questions, and 13 of 15 with pinned sentences.
 
 Scoring checks that each answer contains the expected fact. Each set ran once, so these scores show direction rather than a precise rate.
 
@@ -74,7 +86,7 @@ Scoring checks that each answer contains the expected fact. Each set ran once, s
 
 **Templates before the model.** Who won, who was on pole and how many wins all follow fixed shapes, so Python parses them and fills the SQL. A template must account for every word of the question, and any word it doesn't recognise sends the question to the model instead.
 
-**Sentence-backed answers over model-written SQL.** Model-written SQL runs without error even when it asks the wrong thing, and holdout 5 showed it answering counts wrongly with confidence. A retrieval answer must use only numbers from sentences built from the tables, so it wins when it gives one. On the 47 questions that took the SQL path across six runs, that choice would have scored 36 right and 10 wrong instead of 29 and 16. Rankings stay with SQL, because no sentence holds one: there SQL got 4 of 5 and retrieval 2.
+**Sentence-backed answers over model-written SQL.** Model-written SQL runs without error even when it asks the wrong thing, and holdout 5 showed it answering counts wrongly with confidence. A retrieval answer must use only numbers from sentences built from the tables, so it wins when it gives one. On the 47 questions that took the SQL path across six runs, that choice would have scored 36 right and 10 wrong instead of 29 and 16. Rankings stay with SQL, because no sentence holds one: there SQL got 4 of 5 and retrieval 2. Holdout 8 showed the limit of this choice: a sentence can be true and still answer a wider question, as when Barrichello's career podium total answered a question about his Ferrari years. The fix was a template for that shape, not a change in which answer wins.
 
 **One team, however many names.** Early entries pair chassis and engine, so Cooper appears under 10 names and an exact match gave it 2 wins instead of 16. Names are grouped into teams for counts and rankings. Team Lotus, the 2010-2011 Lotus team and Lotus F1 stay separate, and a question about "Lotus" alone counts all three and says so.
 
@@ -90,7 +102,7 @@ Scoring checks that each answer contains the expected fact. Each set ran once, s
 
 **Definitions live in Python.** Pole position is `grid = 1`, because `f1_qualifying` starts in 1994 and gives Senna 3 poles instead of 65. A small semantic layer adds that hint only when the question needs it.
 
-**Guards in code, not in the prompt.** Python refuses topics the data lacks, allows `how many` only for things the tables count, rejects invented values and verifies numbers in the final sentence. These checks behave the same way every time, and most bad queries run without error, so only a check outside the model catches them. Refusals list what is missing rather than what is allowed. An allow-list of nouns refused 5 of 30 answerable questions on its first blind set, while the vocabulary list of missing topics has refused no answerable question in any set.
+**Guards in code, not in the prompt.** Python refuses topics the data lacks, allows `how many` only for things the tables count, rejects invented values, and checks that every number and name in the final sentence appears in the data or the question. These checks behave the same way every time, and most bad queries run without error, so only a check outside the model catches them. Refusals list what is missing rather than what is allowed. An allow-list of nouns refused 5 of 30 answerable questions on its first blind set, while the vocabulary list of missing topics has refused no answerable question in any set.
 
 **Replace the whole season, in one transaction.** The 2026 calendar changed from 22 to 23 rounds while the snapshot was stale, so appending would have kept wrong rows. Rounds already stored must match the API, or the merge stops. A full index rebuild takes minutes and can't leave the corpus and Chroma out of step.
 
@@ -98,7 +110,7 @@ Scoring checks that each answer contains the expected fact. Each set ran once, s
 
 ## What I'd do next
 
-1. Score the changes since holdout 7 on a new set written blind to the code.
+1. Score the changes since holdout 8 on a new set written blind to the code.
 2. Add lap-by-lap data from the same API to answer questions about laps led. It's about 7,000 requests, so it means hours under the free rate limit.
 3. Test a larger local model on new questions.
 
@@ -158,7 +170,7 @@ python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
 | `app.py` | The Gradio app: ask anything and see the route, SQL and sources |
 | `showcase/` | Records every eval answer and builds the static page published on Hugging Face |
 | `deploy/` | Docker setup for running the app in a Hugging Face Space |
-| `eval/` | 318 questions across 14 sets, every recorded result, and the runner that scores a set |
+| `eval/` | 348 questions across 15 sets, every recorded result, and the runner that scores a set |
 
 | Notebook | Topic | Main finding |
 |---|---|---|
@@ -172,7 +184,7 @@ python eval/run_holdout.py holdout4 eval/results_holdout4_new.json
 | 07 | Live data | 15 more rounds of 2026 through a validated merge |
 | 08 | Final evaluation | Retrieval, generation and end-to-end scored separately |
 
-Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout7_*.json`.
+Notebooks 05 to 08 record their own runs, and `src/` and the corpus changed afterwards, so re-running them gives different numbers. The latest results are in `eval/results_holdout8_*.json`.
 
 ## Stack
 
