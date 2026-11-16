@@ -605,6 +605,40 @@ def fastest_pit_answer(text: str) -> dict:
     return {"answer": f"The fastest pit stop in {place} took {number(row[0])} seconds, by {row[1]} ({row[2]}).", "sql": sql}
 
 
+AGE = re.compile(r"^(who|which driver) (was|is|became|remains) the (?P<end>youngest|oldest)\b")
+AGE_FILLER = SHARED_FILLER | set("""who which driver was is became remains the youngest oldest ever man person to win take
+    score start finish claim get stand become winner sitter on pole position podium points race entered""".split())
+# what a driver did, by the condition that counts it
+DOING = {"position = 1": "win a race", "grid = 1": "start from pole", "position <= 3": "finish on the podium",
+         "points > 0": "score points", "TRUE": "start a race"}
+
+
+def age_answer(text: str) -> dict:
+    """The youngest or oldest driver to win, take pole, score... from date of birth and race date."""
+    end = AGE.search(text).group("end")
+    # "the youngest winner" is the youngest to win
+    metric = pick_metric(re.sub(r"\bwinner\b", "win", text)) or (STARTS if re.search(r"\bstart\b", text) else None)
+    if metric is None or metric[1] == DNF:
+        return None
+    condition = metric[1] or "points > 0"
+    period, when, rest = period_filter(text)
+    if set(rest.split()) - AGE_FILLER:
+        return None
+    where = " AND ".join([f"r.{condition}" if condition != "TRUE" else "TRUE", "d.dob IS NOT NULL"] + ([f"r.{period}"] if period else []))
+    sql = f"""SELECT r.driver_name, r.season, r.race_name, d.dob, CAST(ra.date AS DATE) AS raced
+              FROM f1_results r JOIN f1_races ra USING (season, round) JOIN f1_drivers d USING (driver_id)
+              WHERE {where} ORDER BY date_diff('day', d.dob, raced) {'DESC' if end == 'oldest' else 'ASC'}, 1 LIMIT 1"""
+    row = con.execute(sql).fetchone()
+    if row is None:
+        return None
+    name, season, race, born, raced = row
+    # whole years to the last birthday, then the days since it
+    years = raced.year - born.year - ((raced.month, raced.day) < (born.month, born.day))
+    birthday = born.replace(year=born.year + years) if not (born.month == 2 and born.day == 29) else born.replace(year=born.year + years, day=28)
+    return {"answer": f"{name} was the {end} driver to {DOING[condition]}{when}: {years} years and {(raced - birthday).days} days old "
+                      f"at the {season} {race}.", "sql": sql}
+
+
 def named_only(names: dict, question: str) -> dict:
     """In free text, a lone surname counts only when capitalised, so "I'd love" isn't John Love. All lower case is taken as typed."""
     if question == question.lower():
@@ -698,6 +732,8 @@ def template_answer(question: str) -> dict:
         return average_pit_answer(text)
     if FASTEST_PIT.search(text):
         return fastest_pit_answer(text)
+    if AGE.search(text):
+        return age_answer(text)
     if COUNT.search(text):
         if PIT_STOPS.search(text):
             return pit_answer(text)

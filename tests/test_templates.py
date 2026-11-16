@@ -300,6 +300,12 @@ name("Who has won the most drivers championships?", "Lewis Hamilton and Michael 
 name("Which team started from pole most often during the 2010s?", "Mercedes")  # "started" is still about poles
 number("How many races has Fernando Alonso entered?", "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Fernando Alonso'")
 
+# youngest and oldest, from date of birth and race date
+name("Who was the oldest driver to win a race?", "Luigi Fagioli was the oldest driver to win a race: 53 years and 22 days")
+name("Who was the youngest driver to win a race?", "Max Verstappen was the youngest driver to win a race: 18 years and 228 days")
+name("Who was the youngest winner in the 1950s?", "Troy Ruttman")
+declined("Who was the youngest world champion?")  # a champion's age needs the date the title was decided
+
 # refusals read only the clauses that ask something
 from src.text_to_sql import asked_part, invented_names, refuses  # noqa: E402
 assert asked_part("Interlagos 2003 was a bizarre, rain-soaked race - what happened and who ended up winning it?") == \
