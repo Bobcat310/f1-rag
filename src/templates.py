@@ -465,6 +465,78 @@ def event_count_answer(text: str) -> dict:
     return {"answer": f"There {'was' if value == 1 else 'were'} {value} {kind}{place}{when}.", "sql": sql}
 
 
+DISTINCT = re.compile(r"^(how many|(what (is|was) )?(the )?(total )?number of)( different| distinct)? (?P<who>drivers|constructors|teams)\b")
+DISTINCT_FILLER = COUNT_FILLER | set("different distinct drivers driver constructors constructor teams team least one managed".split())
+# what each kind of result says about the people counted
+DID = {"position = 1": "won", "grid = 1": "took pole", "position <= 3": "finished on the podium", "points > 0": "scored points",
+       DNF: "failed to finish"}
+
+
+def distinct_count_answer(text: str) -> dict:
+    """How many different drivers or teams won, took pole, scored points... in a period or at a place."""
+    by_team = DISTINCT.search(text).group("who") != "drivers"
+    matched = [m for m in METRICS if re.search(m[0], text)]
+    if len(matched) != 1:
+        return None
+    condition = matched[0][1] or "points > 0"
+    period, when, rest = period_filter(text)
+    race, rest = find_name(rest, RACE_NAMES)
+    circuit, rest = (None, rest) if race else find_name(rest, CIRCUITS)
+    team, rest = (None, rest) if by_team else find_name(rest, CONSTRUCTORS)  # how many drivers won for Ferrari
+    if set(rest.split()) - DISTINCT_FILLER:
+        return None
+    sprint = bool(re.search(r"\bsprints?\b", text))
+    table = "f1_sprint_results" if sprint else "f1_results"
+    filters = [condition] + ([period] if period else [])
+    if race:
+        filters.append(f"race_name = {quoted(race)}")
+    if circuit:
+        filters.append(f"""season * 100 + round IN (SELECT r.season * 100 + r.round FROM f1_races r
+                           JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = {quoted(circuit)})""")
+    if team:
+        filters.append(team_filter(team))
+    column = TEAM_COLUMN if by_team else "driver_name"
+    sql = f"SELECT COUNT(DISTINCT {column}) FROM {table} WHERE {' AND '.join(filters)}"
+    value = con.execute(sql).fetchone()[0]
+    if not value:
+        return None  # nobody, which more likely means a misread filter
+    who = ("team" if by_team else "driver") + ("" if value == 1 else "s")
+    did = DID[condition] + (" a sprint" if sprint and condition == "position = 1" else " a race" if condition == "position = 1" and not race
+                            else " in a sprint" if sprint else "")
+    if race and one_season(period):  # "at the 2023 Italian Grand Prix", not "at the Italian Grand Prix in 2023"
+        place, when = f" at the {period.split('= ')[1]} {race}", ""
+    else:
+        place = f" at the {race}" if race else f" at {circuit}" if circuit else ""
+    for_team = f" for {team}" if team else ""
+    return {"answer": f"{value} different {who} {did}{for_team}{place}{when}.", "sql": sql}
+
+
+FASTEST_PIT = re.compile(r"\b(fastest|quickest|shortest) pit stops?\b")
+FASTEST_FILLER = AVERAGE_FILLER | set("fastest quickest shortest anyone recorded who which driver team had made set season".split())
+
+
+def fastest_pit_answer(text: str) -> dict:
+    """The shortest stop in a season or a race, and who made it."""
+    season = SEASON.search(text)
+    if season is None:
+        return None
+    year = int(season.group(1))
+    rest = text.replace(season.group(0), "")
+    round_no, race_name, rest = find_race(rest, year)
+    if set(rest.split()) - FASTEST_FILLER:
+        return None
+    if year < 2011:
+        return {"answer": "That isn't in the data: pit stops start in 2011.", "sql": None}
+    where = f"p.season = {year}" + (f" AND p.round = {round_no}" if round_no else "")
+    sql = f"""SELECT p.duration, r.driver_name, r.constructor FROM f1_pit_stops p
+              JOIN f1_results r USING (season, round, driver_id) WHERE {where} ORDER BY p.duration LIMIT 1"""
+    row = con.execute(sql).fetchone()
+    if row is None:
+        return None
+    place = f"the {year} {race_name}" if round_no else str(year)
+    return {"answer": f"The fastest pit stop in {place} took {number(row[0])} seconds, by {row[1]} ({row[2]}).", "sql": sql}
+
+
 def named_only(names: dict, question: str) -> dict:
     """In free text, a lone surname counts only when capitalised, so "I'd love" isn't John Love. All lower case is taken as typed."""
     if question == question.lower():
@@ -556,9 +628,13 @@ def template_answer(question: str) -> dict:
     season = SEASON.search(text)
     if AVERAGE_PIT.search(text):
         return average_pit_answer(text)
+    if FASTEST_PIT.search(text):
+        return fastest_pit_answer(text)
     if COUNT.search(text):
         if PIT_STOPS.search(text):
             return pit_answer(text)
+        if DISTINCT.search(text):
+            return distinct_count_answer(text)
         # "how many races has Hamilton won" is a driver's count, so it falls through
         return (event_count_answer(text) if EVENTS.search(text) else None) or count_answer(text)
     if CIRCUIT_MOST.search(text):

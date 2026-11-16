@@ -1,4 +1,5 @@
 """Checks templates against separately written SQL. Run: python tests/test_templates.py"""
+import re
 import sys
 from pathlib import Path
 
@@ -16,7 +17,9 @@ def number(question: str, truth_sql: str):
     answer = template_answer(question)
     assert answer, f"no template for: {question}"
     expected = f"{one(truth_sql):g}"
-    assert f" {expected} " in answer["answer"], f"{question}: {answer['answer']} != {expected}"
+    # a whole number, wherever it sits in the sentence: 10 matches "10 different" but not "110" or "10.5"
+    assert re.search(rf"(?<![\d.]){re.escape(expected)}(?![\d]|\.\d)", answer["answer"]), \
+        f"{question}: {answer['answer']} != {expected}"
 
 
 def name(question: str, expected: str):
@@ -272,6 +275,20 @@ number("How many wins did Ferrari have before 1960?",
        "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor = 'Ferrari' AND season < 1960 AND position = 1")
 number("How many podiums did Lewis Hamilton get from 2014 onwards?",
        "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND season >= 2014 AND position <= 3")
+
+# counting different drivers or teams, and the fastest pit stop
+number("How many drivers scored points in the 2023 Italian Grand Prix?",
+       "SELECT COUNT(DISTINCT driver_name) FROM f1_results WHERE season = 2023 AND race_name = 'Italian Grand Prix' AND points > 0")
+number("How many different drivers won a race in 2012?",
+       "SELECT COUNT(DISTINCT driver_name) FROM f1_results WHERE season = 2012 AND position = 1")
+number("In 2012, how many different constructors managed to win at least one Grand Prix?",
+       "SELECT COUNT(DISTINCT constructor) FROM f1_results WHERE season = 2012 AND position = 1")
+number("How many drivers won for Ferrari in the 2000s?",
+       "SELECT COUNT(DISTINCT driver_name) FROM f1_results WHERE constructor = 'Ferrari' AND season BETWEEN 2000 AND 2009 AND position = 1")
+name("How long was the fastest pit stop at the 2022 Spanish Grand Prix?", "21.62 seconds")
+name("What was the quickest pit stop time anyone recorded during the 2023 season?", "16.25 seconds")
+name("How long was the fastest pit stop at the 2005 Monaco Grand Prix?", "pit stops start in 2011")
+assert template_answer("How long was the average pit stop at the 2022 Spanish Grand Prix?")["answer"].startswith("The average")
 
 # refusals read only the clauses that ask something
 from src.text_to_sql import asked_part, invented_names, refuses  # noqa: E402
