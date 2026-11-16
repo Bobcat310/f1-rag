@@ -202,9 +202,9 @@ footer p { margin: 0 0 8px; }
 
   <section aria-labelledby="results">
     <h2 id="results">Results on frozen question sets</h2>
-    <p class="sub">For each set, 30 questions were committed after the code and before any run, then scored once. I wrote
-      sets 1 to 4. Sets 5 to 7 were written by a separate agent that saw the data but never the code, and their looser
-      wording is the honest test.</p>
+    <p class="sub" id="results-sub">For each set, 30 questions were committed after the code and before any run, then scored
+      once. I wrote the first sets. The later ones were written by separate agents that saw the data but never the code,
+      and their looser wording is the honest test.</p>
     <div class="chart-card">
       <div class="chart-head">
         <div class="seg" role="group" aria-label="Pipeline" id="pipeline">
@@ -301,6 +301,10 @@ footer p { margin: 0 0 8px; }
       el("div", { class: "num", text: String(latest.hybrid[k]) }),
       el("div", { class: "lbl" }, el("i", { class: "dot " + k }), OUTCOMES[k])));
   }
+  const mine = D.holdouts.filter((h) => h.author !== "blind").length;
+  $("results-sub").textContent = "For each set, 30 questions were committed after the code and before any run, then scored " +
+    `once. I wrote sets 1 to ${mine}. Sets ${mine + 1} to ${D.holdouts.length} were written by separate agents that saw the ` +
+    "data but never the code, and their looser wording is the honest test.";
   $("tile-note").textContent = `${latest.label}: ${latest.total} questions written blind to the code, scored once. ` +
     `Retrieval alone got ${latest.vector.right} right and ${latest.vector.wrong} wrong.`;
 
