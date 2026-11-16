@@ -236,4 +236,26 @@ assert focus_lines("Vettel or Alonso - whose career was more successful?") == [
 assert NOT_IN_DATA.search("What position was Lewis Hamilton running in on lap 30 of the 2021 Sao Paulo Grand Prix?")
 assert not NOT_IN_DATA.search("On which lap did Hamilton make his first pit stop in the 2021 Sao Paulo Grand Prix?")
 
+# refusals read only the clauses that ask something
+from src.text_to_sql import asked_part, invented_names, refuses  # noqa: E402
+assert asked_part("Interlagos 2003 was a bizarre, rain-soaked race - what happened and who ended up winning it?") == \
+    "what happened and who ended up winning it"
+assert not refuses("Interlagos 2003 was a bizarre, rain-soaked race - what happened and who ended up winning it?")
+for question in ("What was the weather like at the 2023 Monaco Grand Prix?", "Was it raining at the 2008 Brazilian Grand Prix?",
+                 "quick one - who is Nico Rosberg married to?", "Where was Ayrton Senna born?",
+                 "How high above sea level is the circuit in Mexico City?",
+                 "What was the chassis designation of the six-wheeled Tyrrell that won the 1976 Swedish Grand Prix?"):
+    assert refuses(question), question
+for question in ("Settling a bet here: who was the Formula 1 world drivers' champion in 1964?",
+                 "How many world championship Grands Prix were held at Brands Hatch?",
+                 "Vanwall were only around for a few seasons in the 50s. How many world championship races did they win in total?",
+                 "Which outfit topped the constructors' table in 1967?", "How many Grand Prix victories did Juan Manuel Fangio rack up?",
+                 "1982 was a wild year - how many different drivers won a Grand Prix that season?", "When was Ayrton Senna born?"):
+    assert not refuses(question), question
+
+# a name neither the rows nor the question hold means the model made it up
+assert invented_names("Nico Rosberg is married to Vivian Sibold.", "Nico Rosberg 2016 Mercedes who is Nico Rosberg married to") == \
+    ["Vivian", "Sibold"]
+assert invented_names("Kimi Räikkönen won for Ferrari. He took the 2007 title.", "Kimi Raikkonen Ferrari 2007") == []
+
 print("template checks passed")

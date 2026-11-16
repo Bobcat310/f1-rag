@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.retriever import fused_search, sentences
 from src.templates import focus_lines, template_answer
-from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, NOT_IN_DATA, asks_for_missing_field, client, numbers_in, run_sql, sql_answer
+from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, client, invented_names, numbers_in, refuses, run_sql, sql_answer
 
 
 NARRATIVE = re.compile(r"^\s*(tell me|describe|explain|why|how did|how was|compare|summari[sz]e|what happened)", re.IGNORECASE)
@@ -14,7 +14,7 @@ FACT = re.compile(r"\b(how many|number of|tally|who|which|most|average|total|wha
 
 def route(question: str) -> str:
     """refuse: data we don't have. vector: open questions. sql: one exact answer."""
-    if NOT_IN_DATA.search(question) or asks_for_missing_field(question):
+    if refuses(question):
         return "refuse"
     if NARRATIVE.search(question):
         return "vector"
@@ -41,8 +41,8 @@ Answer:"""
         options=LLM_OPTIONS,
     )
     answer = response["message"]["content"].strip()
-    # same check as the SQL path: a number the context lacks means the model made it up
-    if not numbers_in(answer) <= numbers_in(context) | numbers_in(question):
+    # same checks as the SQL path: a number or a name the context lacks means the model made it up
+    if not numbers_in(answer) <= numbers_in(context) | numbers_in(question) or invented_names(answer, context + " " + question):
         return found[0]
     return answer
 

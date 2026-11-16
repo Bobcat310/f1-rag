@@ -62,7 +62,7 @@ HINTS = [
 ]
 
 # The dataset has none of this, so Python refuses without asking the model.
-NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|lap times?|favou?rite|popular|opinions?"
+NOT_IN_DATA = re.compile(r"\b(weather|rain|raining|rained|rainy|rainfall|temperature|tyres?|tires?|lap times?|favou?rite|popular|opinions?"
                          r"|engineers?|sponsors?|salary|salaries|contracts?|budgets?|attendance|penalt(y|ies)|overtak(es?|ing)"
                          r"|design(s|ed|er|ers)?|owns|owned|owners?"
                          # race-day details the results tables never record
@@ -70,24 +70,32 @@ NOT_IN_DATA = re.compile(r"\b(weather|rain|rainfall|temperature|tyres?|tires?|la
                          r"|strateg(y|ies)|undercut|telemetry|downforce|horsepower|prize money|tickets?|spectators?|crowds?"
                          # measures and belongings no table holds
                          r"|top speeds?|speeds?|capacity|seating|weigh(s|t|ts)?|costs?|price[sd]?|money|colou?rs?|liver(y|ies)"
-                         r"|fuel|followers|social media|instagram|helmets?)\b"
+                         r"|fuel|followers|social media|instagram|helmets?|chassis|elevation|altitude|sea level"
+                         # personal life: nothing about a driver beyond name, birth date and nationality
+                         r"|married|marriage|wife|husband|spouse|girlfriend|boyfriend|children|kids|net worth|religion"
+                         r"|birthplace|hometown|place of birth)\b"
+                         r"|\bwhere (was|is) .{1,40} born\b"
                          r"|\blaps\b.*\b(lead|led)\b|\b(lead|led)\b.*\blaps\b"
                          # running order lap by lap; pit stops record their lap, so those stay answerable
                          r"|^(?!.*\bpit).*\b(lap \d+|lap[- ]by[- ]lap)\b", re.IGNORECASE)
 
 # SQL can only answer for things the tables hold, so these list what they hold
-HOW_MANY = re.compile(r"\bhow many (\w+)", re.IGNORECASE)
+# "how many world championship races" counts races, so modifiers before the noun are skipped
+MODIFIERS = (r"(?:(?:world|championship|formula|one|1|f1|grand|prix|gp|different|distinct|official|total|more|other"
+             r"|separate|individual|drivers'|constructors'|reigning|current)\s+)*")
+HOW_MANY = re.compile(r"\bhow many " + MODIFIERS + r"(\w+)", re.IGNORECASE)
 COUNTABLE = set("""race races grand grands sprint sprints win wins victory victories pole poles podium podiums point points driver drivers
     constructor constructors team teams time times season seasons title titles championship championships lap laps pit
     stop stops round rounds circuit circuits country countries different distinct consecutive fastest start starts
     retirement retirements dnf dnfs finish finishes""".split())
-WHO_ROLE = re.compile(r"^\s*who (?:is|was) (?:the|his|her|their) (\w+)", re.IGNORECASE)
+WHO_ROLE = re.compile(r"^\s*who (?:is|was) (?:the|his|her|their) " + MODIFIERS + r"(\w+)", re.IGNORECASE)
 ROLES = set("""winner champion first last youngest oldest fastest most best only leader runner second third driver
     drivers constructors world teammate""".split())
-NO_MEASURE = re.compile(r"^\s*how (much|tall|heavy|big|long|fast|far)\b", re.IGNORECASE)
+NO_MEASURE = re.compile(r"^\s*how (much|tall|heavy|big|long|fast|far|high|wide|steep)\b", re.IGNORECASE)
 WHICH_THING = re.compile(r"^\s*which (\w+)", re.IGNORECASE)
 CHOOSABLE = set("""driver drivers team teams constructor constructors race races grand circuit circuits track tracks
-    season seasons year years round rounds country countries nationality""".split())
+    season seasons year years round rounds country countries nationality outfit outfits squad squads marque marques
+    venue venues""".split())
 
 
 # "most" only, because "at least one" isn't a ranking
@@ -118,9 +126,29 @@ def asks_for_missing_field(question: str) -> bool:
             or (role is not None and role.group(1).lower() not in ROLES and not role.group(1).isdigit()))
 
 
+# Where a question splits into clauses: a colon, a spaced dash, a semicolon, a comma or a sentence end
+CLAUSE = re.compile(r"\s*(?:[:;,]|\s[-–—]\s|[.?!](?=\s|$))\s*")
+ASKING = re.compile(r"(who|whom|whose|what|what's|which|when|where|why|how|did|does|do|was|were|is|are|has|have|had"
+                    r"|can|could|tell|describe|explain|compare|give|list|name|summari[sz]e)\b", re.IGNORECASE)
+
+
+def asked_part(question: str) -> str:
+    """
+    The clauses that ask something. "Interlagos 2003 was a rain-soaked race - who won it?" asks only
+    who won, so the rain in the scene-setting clause shouldn't refuse it.
+    """
+    asked = [part for part in CLAUSE.split(question) if ASKING.match(part)]
+    return " ".join(asked) if asked else question
+
+
+def refuses(question: str) -> bool:
+    part = asked_part(question)
+    return bool(NOT_IN_DATA.search(part)) or asks_for_missing_field(part)
+
+
 def build_prompt(question: str):
     """Returns the prompt, or None when the question needs data we don't have."""
-    if NOT_IN_DATA.search(question):
+    if NOT_IN_DATA.search(asked_part(question)):
         return None
     matched = [(note, example) for pattern, note, example in HINTS
                if re.search(pattern, question, flags=0 if "[A-Z]" in pattern else re.IGNORECASE)]
@@ -248,6 +276,25 @@ def numbers_in(text: str) -> set:
     return {float(n.replace(",", "")) for n in re.findall(r"\d[\d,]*(?:\.\d+)?", text)}
 
 
+# Capitalised words a sentence can use without the data holding them
+PLAIN_CAPITALS = set("""i grand prix grands formula one f1 world championship championships drivers constructors
+    the a an in at on with and""".split())
+
+
+def invented_names(answer: str, source: str) -> list:
+    """
+    Capitalised words after the start of a sentence that neither the data nor the question
+    holds. A small model fills a gap with a plausible name, which no number check catches.
+    """
+    known = set(words(source)) | PLAIN_CAPITALS
+    invented = []
+    for sentence in re.split(r"(?<=[.!?])\s+", answer):
+        for name in re.findall(r"(?<=\s)[A-Z][\w'À-ſ-]*", sentence):
+            if not set(words(name)) <= known:
+                invented.append(name)
+    return invented
+
+
 def sql_answer(question: str, result_df) -> str:
     """
     Turn the result into a sentence. Python handles empty results, and any answer
@@ -275,6 +322,6 @@ Answer:"""
     answer = response["message"]["content"].strip()
 
     allowed = numbers_in(result_text) | numbers_in(question)
-    if not numbers_in(answer) <= allowed:
+    if not numbers_in(answer) <= allowed or invented_names(answer, result_text + " " + question):
         return f"Result of the query:\n{result_text}"
     return answer
