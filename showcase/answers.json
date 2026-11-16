@@ -1,6 +1,6 @@
 {
  "recorded": "2026-11-16",
- "commit": "122ac09",
+ "commit": "e64ec7f",
  "rows": [
   {
    "id": "dev01",
@@ -11,7 +11,7 @@
    "answer": "Ayrton Senna had 41 wins.",
    "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Ayrton Senna' AND position = 1",
    "sources": [],
-   "seconds": 0.1,
+   "seconds": 0.0,
    "expected": [
     41
    ],
@@ -62,7 +62,7 @@
     "The 2003 Hungarian Grand Prix at Hungaroring in Budapest, Hungary was won by Fernando Alonso for Renault, with Fernando Alonso on pole position, and the podium was Fernando Alonso, Kimi Räikkönen and Juan Pablo Montoya.",
     "At the end of the 2025 season, Fernando Alonso was 10th in the drivers championship with 56.0 points and 0 wins, driving for Aston Martin, from 24 races with 0 pole positions, 0 podiums and 5 races not finished."
    ],
-   "seconds": 151.0,
+   "seconds": 27.3,
    "expected": [
     6
    ],
@@ -83,7 +83,7 @@
     "In the 1955 Argentine Grand Prix, Stirling Moss retired (Fuel system), grid position 8, scoring 0.0 points for Mercedes.",
     "In the 2015 constructors championship, Mercedes won the title with 703.0 points and 16 wins."
    ],
-   "seconds": 31.3,
+   "seconds": 18.8,
    "expected": [
     457.72
    ],
@@ -94,15 +94,15 @@
    "split": "dev",
    "kind": "domain",
    "question": "Which driver has the most podiums at Monaco?",
-   "path": "sql",
-   "answer": "Lewis Hamilton has the most podiums at Monaco with 8.",
-   "sql": "SELECT r.driver_name, COUNT(*) AS podiums FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'monaco' AND r.position <= 3 GROUP BY r.driver_name ORDER BY podiums DESC LIMIT 1",
+   "path": "template",
+   "answer": "Ayrton Senna and Lewis Hamilton had the most podiums at Circuit de Monaco, with 8 each.",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season * 100 + round IN (SELECT r.season * 100 + r.round FROM f1_races r\n                    JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = 'Circuit de Monaco') AND position <= 3 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
-   "seconds": 16.4,
+   "seconds": 0.1,
    "expected": [
     "Ayrton Senna"
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "dev07",
@@ -113,7 +113,7 @@
    "answer": "Lewis Hamilton had 104 pole positions.",
    "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND grid = 1",
    "sources": [],
-   "seconds": 0.1,
+   "seconds": 0.0,
    "expected": [
     104
    ],
@@ -154,11 +154,11 @@
    "split": "dev",
    "kind": "join",
    "question": "Which driver won the most races at Silverstone?",
-   "path": "sql",
-   "answer": "Lewis Hamilton won the most races at Silverstone with 9 wins.",
-   "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'silverstone' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1",
+   "path": "template",
+   "answer": "Lewis Hamilton had the most wins at Silverstone Circuit, with 9.",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season * 100 + round IN (SELECT r.season * 100 + r.round FROM f1_races r\n                    JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = 'Silverstone Circuit') AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
-   "seconds": 14.8,
+   "seconds": 0.0,
    "expected": [
     "Lewis Hamilton"
    ],
@@ -169,15 +169,15 @@
    "split": "dev",
    "kind": "join",
    "question": "Who was the oldest driver to win a race?",
-   "path": "sql",
-   "answer": "Max Verstappen was the oldest driver to win a race.",
-   "sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 ORDER BY c.date - d.dob ASC LIMIT 1",
+   "path": "template",
+   "answer": "Luigi Fagioli was the oldest driver to win a race: 53 years and 22 days old at the 1951 French Grand Prix.",
+   "sql": "SELECT r.driver_name, r.season, r.race_name, d.dob, CAST(ra.date AS DATE) AS raced\n              FROM f1_results r JOIN f1_races ra USING (season, round) JOIN f1_drivers d USING (driver_id)\n              WHERE r.position = 1 AND d.dob IS NOT NULL ORDER BY date_diff('day', d.dob, raced) DESC, 1 LIMIT 1",
    "sources": [],
-   "seconds": 27.2,
+   "seconds": 0.0,
    "expected": [
     "Luigi Fagioli"
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "dev12",
@@ -229,7 +229,7 @@
    "question": "Which constructor scored the most points in 2019?",
    "path": "template",
    "answer": "Mercedes scored the most points in 2019, with 739.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, SUM(points) AS n FROM f1_constructor_standings WHERE season = 2019 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, SUM(points) AS n FROM f1_constructor_standings WHERE season = 2019 GROUP BY 1 ORDER BY n DESC LIMIT 2",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -242,21 +242,15 @@
    "split": "test",
    "kind": "aggregate",
    "question": "How many drivers scored points in the 2023 Italian Grand Prix?",
-   "path": "sql>vector",
-   "answer": "Three drivers scored points in the 2023 Italian Grand Prix: Max Verstappen, Sergio Pérez, and Carlos Sainz.",
-   "sql": "SELECT d.given_name || ' ' || d.family_name, s.points FROM f1_driver_standings s JOIN f1_drivers d USING (driver_id) WHERE s.season = 2023 AND s.race_name = (SELECT race_name FROM f1_results WHERE season = 2023 AND race_name = 'Italian Grand Prix') ORDER BY s.points DESC LIMIT 1",
-   "sources": [
-    "The 2023 Italian Grand Prix at Autodromo Nazionale di Monza in Monza, Italy was won by Max Verstappen for Red Bull, with Carlos Sainz on pole position, and the podium was Max Verstappen, Sergio Pérez and Carlos Sainz.",
-    "In the 2023 Italian Grand Prix, Oscar Piastri finished 12th starting from position 7, scoring 0.0 points for McLaren and set the fastest lap.",
-    "In the 2023 United States Grand Prix, Oscar Piastri retired, grid position 10, scoring 0.0 points for McLaren.",
-    "In the 2026 Italian Grand Prix, Fernando Alonso retired, grid position 21, scoring 0.0 points for Aston Martin.",
-    "In the 2023 Italian Grand Prix, Carlos Sainz finished 3rd starting from position 1, scoring 15.0 points for Ferrari."
-   ],
-   "seconds": 64.2,
+   "path": "template",
+   "answer": "10 different drivers scored points at the 2023 Italian Grand Prix.",
+   "sql": "SELECT COUNT(DISTINCT driver_name) FROM f1_results WHERE points > 0 AND season = 2023 AND race_name = 'Italian Grand Prix'",
+   "sources": [],
+   "seconds": 0.0,
    "expected": [
     10
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "test05",
@@ -267,7 +261,7 @@
    "answer": "Kimi Räikkönen had 103 podiums.",
    "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Kimi Räikkönen' AND position <= 3",
    "sources": [],
-   "seconds": 0.1,
+   "seconds": 0.0,
    "expected": [
     103
    ],
@@ -326,17 +320,11 @@
    "split": "test",
    "kind": "join",
    "question": "Which driver has the most wins at Spa?",
-   "path": "sql>vector",
-   "answer": "Michael Schumacher has the most wins at Spa, with 6 wins.",
-   "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE r.race_name = 'spa' GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1",
-   "sources": [
-    "Circuit de Spa-Francorchamps in Spa, Belgium hosted 59 Formula 1 races from 1950 to 2026. The most wins there came from Michael Schumacher, with 6 wins.",
-    "At the end of the 1968 season, Dan Gurney was 21st in the drivers championship with 3.0 points and 0 wins, driving for Eagle-Weslake, Brabham-Repco and McLaren-Ford, from 9 races with 0 pole positions, 0 podiums and 7 races not finished.",
-    "At the end of the 1964 season, Dan Gurney was 6th in the drivers championship with 19.0 points and 2 wins, driving for Brabham-Climax, from 10 races with 2 pole positions, 2 podiums and 5 races not finished.",
-    "The 1952 Belgian Grand Prix at Circuit de Spa-Francorchamps in Spa, Belgium was won by Alberto Ascari for Ferrari, with Alberto Ascari on pole position, and the podium was Alberto Ascari, Nino Farina and Robert Manzon.",
-    "At the end of the 1967 season, Jo Siffert was 12th in the drivers championship with 6.0 points and 0 wins, driving for Cooper-Maserati, from 10 races with 0 pole positions, 0 podiums and 6 races not finished."
-   ],
-   "seconds": 55.2,
+   "path": "template",
+   "answer": "Michael Schumacher had the most wins at Circuit de Spa-Francorchamps, with 6.",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season * 100 + round IN (SELECT r.season * 100 + r.round FROM f1_races r\n                    JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = 'Circuit de Spa-Francorchamps') AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
+   "sources": [],
+   "seconds": 0.0,
    "expected": [
     "Michael Schumacher"
    ],
@@ -357,7 +345,7 @@
     "Aintree in Liverpool, UK hosted 5 Formula 1 races from 1955 to 1962. The most wins there came from Stirling Moss, with 2 wins.",
     "Kyalami in Midrand, South Africa hosted 20 Formula 1 races from 1967 to 1993. The most wins there came from Niki Lauda, with 3 wins."
    ],
-   "seconds": 27.3,
+   "seconds": 21.1,
    "expected": [
     "Italy"
    ],
@@ -368,11 +356,11 @@
    "split": "test",
    "kind": "join",
    "question": "Who was the youngest driver to win a race?",
-   "path": "sql",
-   "answer": "Max Verstappen was the youngest driver to win a race.",
-   "sql": "SELECT r.driver_name FROM f1_results r JOIN f1_races c USING (season, round) JOIN f1_drivers d USING (driver_id) WHERE r.position = 1 ORDER BY c.date - d.dob ASC LIMIT 1",
+   "path": "template",
+   "answer": "Max Verstappen was the youngest driver to win a race: 18 years and 228 days old at the 2016 Spanish Grand Prix.",
+   "sql": "SELECT r.driver_name, r.season, r.race_name, d.dob, CAST(ra.date AS DATE) AS raced\n              FROM f1_results r JOIN f1_races ra USING (season, round) JOIN f1_drivers d USING (driver_id)\n              WHERE r.position = 1 AND d.dob IS NOT NULL ORDER BY date_diff('day', d.dob, raced) ASC, 1 LIMIT 1",
    "sources": [],
-   "seconds": 29.1,
+   "seconds": 0.0,
    "expected": [
     "Max Verstappen"
    ],
@@ -384,10 +372,10 @@
    "kind": "join",
    "question": "Drivers of which nationality have won the most races?",
    "path": "sql",
-   "answer": "Niki Lauda, a driver of unknown nationality, has won the most races with 25.",
+   "answer": "Result of the query:\n          driver_name  count_star()\n         Troy Ruttman             1\n        Bill Vukovich             2\n            Sam Hanks             1\n        Bruce McLaren             4\n      Lorenzo Bandini             1\n           Jo Siffert             2\n       Clay Regazzoni             5\n      François Cevert             1\n      Ronnie Peterson            10\n         Peter Revson             2\n           James Hunt            10\n          John Watson             5\nJean-Pierre Jabouille             2\n          René Arnoux             7\n          Alain Prost            51\n     Riccardo Patrese             6\n       Patrick Tambay             2\n         Keke Rosberg             5\n        Nigel Mansell            31\n       Gerhard Berger            10",
    "sql": "SELECT driver_name, COUNT(*) FROM f1_results WHERE position = 1 GROUP BY driver_name",
    "sources": [],
-   "seconds": 14.6,
+   "seconds": 10.5,
    "expected": [
     "British"
    ],
@@ -398,15 +386,15 @@
    "split": "test",
    "kind": "aggregate",
    "question": "How long was the fastest pit stop at the 2022 Spanish Grand Prix?",
-   "path": "sql",
-   "answer": "The fastest pit stop at the 2022 Spanish Grand Prix lasted 22.981226 seconds.",
-   "sql": "SELECT AVG(duration) FROM f1_pit_stops WHERE season = 2022 AND race_name = 'Spanish Grand Prix'",
+   "path": "template",
+   "answer": "The fastest pit stop in the 2022 Spanish Grand Prix took 21.62 seconds, by Sergio Pérez (Red Bull).",
+   "sql": "SELECT p.duration, r.driver_name, r.constructor FROM f1_pit_stops p\n              JOIN f1_results r USING (season, round, driver_id) WHERE p.season = 2022 AND p.round = 6 ORDER BY p.duration LIMIT 1",
    "sources": [],
-   "seconds": 20.0,
+   "seconds": 0.0,
    "expected": [
     21.62
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "test14",
@@ -430,7 +418,7 @@
    "answer": "Nigel Mansell had 31 wins.",
    "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Nigel Mansell' AND position = 1",
    "sources": [],
-   "seconds": 0.0,
+   "seconds": 0.1,
    "expected": [
     31
    ],
@@ -473,7 +461,7 @@
    "question": "How many points did McLaren score in 1988?",
    "path": "template",
    "answer": "McLaren had 199 points in 1988.",
-   "sql": "SELECT SUM(points) FROM f1_constructor_standings WHERE season = 1988 AND constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo')",
+   "sql": "SELECT SUM(points) FROM f1_constructor_standings WHERE season = 1988 AND constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima')",
    "sources": [],
    "seconds": 0.2,
    "expected": [
@@ -496,7 +484,7 @@
     "In the 1975 constructors championship, Ferrari won the title with 72.5 points and 6 wins.",
     "In the 1977 constructors championship, Ferrari won the title with 84.0 points and 4 wins."
    ],
-   "seconds": 15.6,
+   "seconds": 17.0,
    "expected": [
     154.08
    ],
@@ -583,11 +571,11 @@
    "split": "test2",
    "kind": "join",
    "question": "Which driver has the most wins at Interlagos?",
-   "path": "sql",
-   "answer": "Michael Schumacher has the most wins at Interlagos with 4.",
-   "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'interlagos' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1",
+   "path": "template",
+   "answer": "Michael Schumacher had the most wins at Autódromo José Carlos Pace, with 4.",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season * 100 + round IN (SELECT r.season * 100 + r.round FROM f1_races r\n                    JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = 'Autódromo José Carlos Pace') AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
-   "seconds": 12.2,
+   "seconds": 0.0,
    "expected": [
     "Michael Schumacher"
    ],
@@ -690,7 +678,7 @@
    "answer": "Red Bull had 21 wins in 2023.",
    "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Red Bull') AND season = 2023 AND position = 1",
    "sources": [],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     21
    ],
@@ -701,15 +689,15 @@
    "split": "test3",
    "kind": "fact",
    "question": "Which driver has started the most races?",
-   "path": "sql",
-   "answer": "Ronnie Peterson has started the most races with 10.",
-   "sql": "SELECT driver_name, COUNT(*) FROM f1_results WHERE position = 1 GROUP BY driver_name",
+   "path": "template",
+   "answer": "Fernando Alonso entered the most races, with 446.",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE TRUE GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
-   "seconds": 10.3,
+   "seconds": 0.0,
    "expected": [
     "Fernando Alonso"
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "test3_07",
@@ -726,7 +714,7 @@
     "In the 2024 United States Grand Prix, Lewis Hamilton retired, grid position 17, scoring 0.0 points for Mercedes.",
     "The 2020 Hungarian Grand Prix at Hungaroring in Budapest, Hungary was won by Lewis Hamilton for Mercedes, with Lewis Hamilton on pole position, and the podium was Lewis Hamilton, Max Verstappen and Valtteri Bottas."
    ],
-   "seconds": 24.4,
+   "seconds": 23.9,
    "expected": [
     347
    ],
@@ -737,21 +725,15 @@
    "split": "test3",
    "kind": "fact",
    "question": "Which team has the most constructors championships?",
-   "path": "sql>vector",
-   "answer": "Team Lotus has the most constructors championships with 7.",
-   "sql": "SELECT constructor FROM f1_constructor_standings WHERE season IN (2011)",
-   "sources": [
-    "In the 1965 constructors championship, BRM finished 2nd with 45.0 points and 3 wins.",
-    "Team Lotus raced in Formula 1 from 1958 to 1994, entering 493 races, with 79 wins, 107 pole positions and 1514 points. Team Lotus won 7 constructors championships (1963, 1965, 1968, 1970, 1972, 1973 and 1978). Its most race wins came from Jim Clark, with 25 wins.",
-    "In the 1970 constructors championship, BRM finished 6th with 23.0 points and 1 win.",
-    "Brabham raced in Formula 1 from 1962 to 1992, entering 394 races, with 35 wins, 39 pole positions and 983 points. Brabham won 2 constructors championships (1966 and 1967). Its most race wins came from Nelson Piquet, with 13 wins.",
-    "In the 1970 constructors championship, March finished 3rd with 48.0 points and 1 win."
-   ],
-   "seconds": 49.7,
+   "path": "template",
+   "answer": "Ferrari won the most constructors championships, with 16.",
+   "sql": "SELECT CASE WHEN s.constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN s.constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN s.constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN s.constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN s.constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN s.constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN s.constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN s.constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN s.constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN s.constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN s.constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE s.constructor END, COUNT(*) AS n FROM f1_constructor_standings s\n                  WHERE s.position = 1 AND s.season <> 2026 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
+   "sources": [],
+   "seconds": 0.2,
    "expected": [
     "Ferrari"
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "test3_09",
@@ -857,7 +839,7 @@
     "The 2024 Monaco Grand Prix at Circuit de Monaco in Monte Carlo, Monaco was won by Charles Leclerc for Ferrari, with Charles Leclerc on pole position, and the podium was Charles Leclerc, Oscar Piastri and Carlos Sainz.",
     "In the 2018 Monaco Grand Prix, Charles Leclerc retired (Collision), grid position 14, scoring 0.0 points for Sauber."
    ],
-   "seconds": 0.1,
+   "seconds": 0.2,
    "expected": [
     "4th",
     "fourth"
@@ -1031,7 +1013,7 @@
    "answer": "Ferrari had 15 wins in 2002.",
    "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Ferrari') AND season = 2002 AND position = 1",
    "sources": [],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     15
    ],
@@ -1059,7 +1041,7 @@
    "question": "Which driver won the most races in 2014?",
    "path": "template",
    "answer": "Lewis Hamilton had the most wins in 2014, with 11.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2014 AND position = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2014 AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -1074,7 +1056,7 @@
    "question": "Which constructor won the most races in 1988?",
    "path": "template",
    "answer": "McLaren had the most wins in 1988, with 15.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season = 1988 AND position = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season = 1988 AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -1134,7 +1116,7 @@
    "question": "Which driver has the most career podiums?",
    "path": "template",
    "answer": "Lewis Hamilton had the most podiums, with 208.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE position <= 3 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE position <= 3 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -1366,7 +1348,7 @@
     "In the 2009 European Grand Prix, Jenson Button finished 7th starting from position 5, scoring 2.0 points for Brawn.",
     "In the 2013 Monaco Grand Prix, Jenson Button finished 6th starting from position 9, scoring 8.0 points for McLaren."
    ],
-   "seconds": 12.5,
+   "seconds": 10.5,
    "expected": [
     "Brawn"
    ],
@@ -1454,7 +1436,7 @@
    "question": "How many wins did McLaren have in 1984?",
    "path": "template",
    "answer": "McLaren had 12 wins in 1984.",
-   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') AND season = 1984 AND position = 1",
+   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') AND season = 1984 AND position = 1",
    "sources": [],
    "seconds": 0.2,
    "expected": [
@@ -1469,7 +1451,7 @@
    "question": "Which driver won the most races in 2004?",
    "path": "template",
    "answer": "Michael Schumacher had the most wins in 2004, with 13.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2004 AND position = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2004 AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -1484,7 +1466,7 @@
    "question": "Which constructor scored the most points in 2011?",
    "path": "template",
    "answer": "Red Bull scored the most points in 2011, with 650.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, SUM(points) AS n FROM f1_constructor_standings WHERE season = 2011 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, SUM(points) AS n FROM f1_constructor_standings WHERE season = 2011 GROUP BY 1 ORDER BY n DESC LIMIT 2",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -1542,11 +1524,11 @@
    "split": "final",
    "kind": "aggregate",
    "question": "Which driver has won the most races at Suzuka?",
-   "path": "sql",
-   "answer": "Michael Schumacher has won 6 races at Suzuka.",
-   "sql": "SELECT r.driver_name, COUNT(*) AS wins FROM f1_results r JOIN f1_races c USING (season, round) WHERE c.circuit_id = 'suzuka' AND r.position = 1 GROUP BY r.driver_name ORDER BY wins DESC LIMIT 1",
+   "path": "template",
+   "answer": "Michael Schumacher had the most wins at Suzuka Circuit, with 6.",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season * 100 + round IN (SELECT r.season * 100 + r.round FROM f1_races r\n                    JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = 'Suzuka Circuit') AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
-   "seconds": 13.0,
+   "seconds": 0.0,
    "expected": [
     "Michael Schumacher"
    ],
@@ -1655,7 +1637,7 @@
     "In the 2026 Singapore Grand Prix, Gabriel Bortoleto retired, grid position 14, scoring 0.0 points for Audi.",
     "In the 2026 Singapore Grand Prix, Carlos Sainz finished 14th starting from position 13, scoring 0.0 points for Williams."
    ],
-   "seconds": 0.2,
+   "seconds": 0.3,
    "expected": [
     "Max Verstappen"
    ],
@@ -1812,7 +1794,7 @@
     "In the 1988 Hungarian Grand Prix, Nigel Mansell retired (Driver unwell), grid position 2, scoring 0.0 points for Williams.",
     "The 2017 Spanish Grand Prix at Circuit de Barcelona-Catalunya in Barcelona, Spain was won by Lewis Hamilton for Mercedes, with Lewis Hamilton on pole position, and the podium was Lewis Hamilton, Sebastian Vettel and Daniel Ricciardo."
    ],
-   "seconds": 11.7,
+   "seconds": 12.3,
    "expected": [
     "Max Verstappen"
    ],
@@ -1983,7 +1965,7 @@
    "answer": "Ferrari had 262 points in 2004.",
    "sql": "SELECT SUM(points) FROM f1_constructor_standings WHERE season = 2004 AND constructor IN ('Ferrari')",
    "sources": [],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     262
    ],
@@ -1996,7 +1978,7 @@
    "question": "Which driver won the most races in 2023?",
    "path": "template",
    "answer": "Max Verstappen had the most wins in 2023, with 19.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2023 AND position = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2023 AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -2011,7 +1993,7 @@
    "question": "Which constructor has the most wins in the 1980s?",
    "path": "template",
    "answer": "McLaren had the most wins in the 1980s, with 56.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 1980 AND 1989 AND position = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 1980 AND 1989 AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -2024,21 +2006,15 @@
    "split": "holdout",
    "kind": "aggregate",
    "question": "How many different drivers won a race in 2012?",
-   "path": "sql>vector",
-   "answer": "Two drivers won a race in 2012: Daniel Ricciardo and Fernando Alonso.",
-   "sql": "SELECT COUNT(DISTINCT driver_name) FROM f1_results WHERE season = 2012 AND position = 1",
-   "sources": [
-    "At the end of the 2012 season, Heikki Kovalainen was 22nd in the drivers championship with 0.0 points and 0 wins, driving for Caterham, from 20 races with 0 pole positions, 0 podiums and 1 race not finished.",
-    "At the end of the 2012 season, Daniel Ricciardo was 18th in the drivers championship with 10.0 points and 0 wins, driving for Toro Rosso, from 20 races with 0 pole positions, 0 podiums and 1 race not finished.",
-    "Lotus F1 raced in Formula 1 from 2012 to 2015, entering 77 races, with 2 wins, 0 pole positions and 706 points. Its most race wins came from Kimi Räikkönen, with 2 wins.",
-    "Michael Schumacher raced in Formula 1 from 1991 to 2012, entering 308 races for Jordan, Benetton, Ferrari and Mercedes, with 91 wins, 68 pole positions, 155 podiums and 1566 points. Michael Schumacher won 7 drivers championships (1994, 1995, 2000, 2001, 2002, 2003 and 2004).",
-    "At the end of the 2012 season, Fernando Alonso was 2nd in the drivers championship with 278.0 points and 3 wins, driving for Ferrari, from 20 races with 2 pole positions, 13 podiums and 2 races not finished."
-   ],
-   "seconds": 15.7,
+   "path": "template",
+   "answer": "8 different drivers won a race in 2012.",
+   "sql": "SELECT COUNT(DISTINCT driver_name) FROM f1_results WHERE position = 1 AND season = 2012",
+   "sources": [],
+   "seconds": 0.0,
    "expected": [
     8
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "holdout_19",
@@ -2055,7 +2031,7 @@
     "In the 2005 United States Grand Prix, Kimi Räikkönen withdrew, grid position 2, scoring 0.0 points for McLaren.",
     "In the 1974 United States Grand Prix, José Dolhem withdrew, grid position 26, scoring 0.0 points for Surtees."
    ],
-   "seconds": 0.4,
+   "seconds": 0.2,
    "expected": [
     "Michael Schumacher"
    ],
@@ -2076,7 +2052,7 @@
     "The 2008 Bahrain Grand Prix at Bahrain International Circuit in Sakhir, Bahrain was won by Felipe Massa for Ferrari, with Robert Kubica on pole position, and the podium was Felipe Massa, Kimi Räikkönen and Robert Kubica.",
     "In the 2010 Bahrain Grand Prix, Karun Chandhok retired (Accident), grid position 24, scoring 0.0 points for HRT."
    ],
-   "seconds": 0.3,
+   "seconds": 0.2,
    "expected": [
     "Fernando Alonso"
    ],
@@ -2097,7 +2073,7 @@
     "In the 2009 Italian Grand Prix, Jaime Alguersuari retired, grid position 20, scoring 0.0 points for Toro Rosso.",
     "The 2010 Italian Grand Prix at Autodromo Nazionale di Monza in Monza, Italy was won by Fernando Alonso for Ferrari, with Fernando Alonso on pole position, and the podium was Fernando Alonso, Jenson Button and Felipe Massa."
    ],
-   "seconds": 0.3,
+   "seconds": 0.2,
    "expected": [
     "Rubens Barrichello"
    ],
@@ -2141,7 +2117,7 @@
     "In the 2017 constructors championship, Ferrari finished 2nd with 522.0 points and 5 wins.",
     "In the 2018 constructors championship, Mercedes won the title with 655.0 points and 11 wins."
    ],
-   "seconds": 0.3,
+   "seconds": 0.2,
    "expected": [
     668
    ],
@@ -2283,7 +2259,7 @@
     "The 2006 Turkish Grand Prix at Istanbul Park in Istanbul, Turkey was won by Felipe Massa for Ferrari, with Felipe Massa on pole position, and the podium was Felipe Massa, Fernando Alonso and Michael Schumacher.",
     "In the 2020 Turkish Grand Prix, Pierre Gasly finished 13th starting from position 19, scoring 0.0 points for AlphaTauri."
    ],
-   "seconds": 15.2,
+   "seconds": 10.4,
    "expected": [
     "Lewis Hamilton"
    ],
@@ -2379,7 +2355,7 @@
     "In the 2006 Australian Grand Prix, Fernando Alonso finished 1st (winner) starting from position 3, scoring 10.0 points for Renault.",
     "In the 2006 United States Grand Prix, Fernando Alonso finished 5th starting from position 5, scoring 4.0 points for Renault."
    ],
-   "seconds": 12.1,
+   "seconds": 11.6,
    "expected": [
     "Renault"
    ],
@@ -2467,7 +2443,7 @@
    "question": "Which driver took the most pole positions in 2019?",
    "path": "template",
    "answer": "Charles Leclerc had the most pole positions in 2019, with 7.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2019 AND grid = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 2019 AND grid = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -2482,7 +2458,7 @@
    "question": "Which team won the most races in the 1970s?",
    "path": "template",
    "answer": "Ferrari had the most wins in the 1970s, with 37.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 1970 AND 1979 AND position = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 1970 AND 1979 AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -2653,7 +2629,7 @@
     "In the 2025 Azerbaijan Grand Prix, Lewis Hamilton finished 8th starting from position 12, scoring 4.0 points for Ferrari.",
     "The 2017 United States Grand Prix at Circuit of the Americas in Austin, USA was won by Lewis Hamilton for Mercedes, with Lewis Hamilton on pole position, and the podium was Lewis Hamilton, Sebastian Vettel and Kimi Räikkönen."
    ],
-   "seconds": 14.7,
+   "seconds": 16.3,
    "expected": [],
    "outcome": "right"
   },
@@ -2827,7 +2803,7 @@
     "In the 1991 Italian Grand Prix, Alain Prost finished 3rd starting from position 5, scoring 4.0 points for Ferrari.",
     "In the 1991 French Grand Prix, Alain Prost finished 2nd starting from position 2, scoring 6.0 points for Ferrari."
    ],
-   "seconds": 11.8,
+   "seconds": 9.3,
    "expected": [
     "Ferrari"
    ],
@@ -2855,7 +2831,7 @@
    "question": "How many races did Cooper win in 1959?",
    "path": "template",
    "answer": "Cooper had 5 wins in 1959.",
-   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') AND season = 1959 AND position = 1",
+   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') AND season = 1959 AND position = 1",
    "sources": [],
    "seconds": 0.2,
    "expected": [
@@ -2870,7 +2846,7 @@
    "question": "How many wins does Brabham have in total?",
    "path": "template",
    "answer": "Brabham had 35 wins.",
-   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') AND position = 1",
+   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') AND position = 1",
    "sources": [],
    "seconds": 0.2,
    "expected": [
@@ -2885,7 +2861,7 @@
    "question": "How many poles did Team Lotus take in the 1970s?",
    "path": "template",
    "answer": "Team Lotus had 37 pole positions in the 1970s.",
-   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') AND season BETWEEN 1970 AND 1979 AND grid = 1",
+   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') AND season BETWEEN 1970 AND 1979 AND grid = 1",
    "sources": [],
    "seconds": 0.1,
    "expected": [
@@ -2915,7 +2891,7 @@
    "question": "Which team won the most races in the 1950s?",
    "path": "template",
    "answer": "Ferrari had the most wins in the 1950s, with 29.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 1950 AND 1959 AND position = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 1950 AND 1959 AND position = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -2938,7 +2914,7 @@
     "Autódromo Internacional Nelson Piquet in Rio de Janeiro, Brazil hosted 10 Formula 1 races from 1978 to 1989. The most wins there came from Alain Prost, with 5 wins.",
     "At the end of the 2002 season, Pedro de la Rosa was 21st in the drivers championship with 0.0 points and 0 wins, driving for Jaguar, from 17 races with 0 pole positions, 0 podiums and 9 races not finished."
    ],
-   "seconds": 18.6,
+   "seconds": 19.3,
    "expected": [
     101
    ],
@@ -2959,7 +2935,7 @@
     "In the 2002 Australian Grand Prix, Michael Schumacher finished 1st (winner) starting from position 2, scoring 10.0 points for Ferrari.",
     "In the 2002 British Grand Prix, Michael Schumacher finished 1st (winner) starting from position 3, scoring 10.0 points for Ferrari."
    ],
-   "seconds": 17.3,
+   "seconds": 17.4,
    "expected": [
     1090
    ],
@@ -2987,7 +2963,7 @@
    "question": "How many races did Jack Brabham win for Cooper?",
    "path": "template",
    "answer": "Jack Brabham for Cooper had 7 wins.",
-   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Jack Brabham' AND constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') AND position = 1",
+   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Jack Brabham' AND constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') AND position = 1",
    "sources": [],
    "seconds": 0.1,
    "expected": [
@@ -3010,7 +2986,7 @@
     "At the end of the 1983 season, Niki Lauda was 10th in the drivers championship with 12.0 points and 0 wins, driving for McLaren, from 14 races with 0 pole positions, 2 podiums and 10 races not finished.",
     "The 1975 Belgian Grand Prix at Zolder in Heusden-Zolder, Belgium was won by Niki Lauda for Ferrari, with Niki Lauda on pole position, and the podium was Niki Lauda, Jody Scheckter and Carlos Reutemann."
    ],
-   "seconds": 0.2,
+   "seconds": 0.3,
    "expected": [
     25
    ],
@@ -3031,7 +3007,7 @@
     "In the 1981 constructors championship, Team Lotus finished 7th with 22.0 points and 0 wins.",
     "In the 1989 constructors championship, Team Lotus finished 6th with 15.0 points and 0 wins."
    ],
-   "seconds": 0.2,
+   "seconds": 0.3,
    "expected": [
     79
    ],
@@ -3052,7 +3028,7 @@
     "The 1988 Australian Grand Prix at Adelaide Street Circuit in Adelaide, Australia was won by Alain Prost for McLaren, with Ayrton Senna on pole position, and the podium was Alain Prost, Ayrton Senna and Nelson Piquet.",
     "The 1990 Belgian Grand Prix at Circuit de Spa-Francorchamps in Spa, Belgium was won by Ayrton Senna for McLaren, with Ayrton Senna on pole position, and the podium was Ayrton Senna, Alain Prost and Gerhard Berger."
    ],
-   "seconds": 0.2,
+   "seconds": 0.4,
    "expected": [
     41
    ],
@@ -3094,7 +3070,7 @@
     "The 1952 Belgian Grand Prix at Circuit de Spa-Francorchamps in Spa, Belgium was won by Alberto Ascari for Ferrari, with Alberto Ascari on pole position, and the podium was Alberto Ascari, Nino Farina and Robert Manzon.",
     "In the 1966 Mexican Grand Prix, Jochen Rindt retired (Suspension), grid position 5, scoring 0.0 points for Cooper-Maserati."
    ],
-   "seconds": 0.1,
+   "seconds": 0.2,
    "expected": [
     "Schumacher"
    ],
@@ -3115,7 +3091,7 @@
     "The 2010 Singapore Grand Prix at Marina Bay Street Circuit in Marina Bay, Singapore was won by Fernando Alonso for Ferrari, with Fernando Alonso on pole position, and the podium was Fernando Alonso, Sebastian Vettel and Mark Webber.",
     "The 2014 Singapore Grand Prix at Marina Bay Street Circuit in Marina Bay, Singapore was won by Lewis Hamilton for Mercedes, with Lewis Hamilton on pole position, and the podium was Lewis Hamilton, Sebastian Vettel and Daniel Ricciardo."
    ],
-   "seconds": 0.2,
+   "seconds": 0.3,
    "expected": [
     "Fernando Alonso"
    ],
@@ -3136,7 +3112,7 @@
     "In the 1982 Canadian Grand Prix, Alain Prost retired (Engine), grid position 3, scoring 0.0 points for Renault.",
     "In the 1982 Canadian Grand Prix, Eliseo Salazar retired (Engine), grid position 24, scoring 0.0 points for ATS."
    ],
-   "seconds": 0.2,
+   "seconds": 0.3,
    "expected": [
     "Nelson Piquet"
    ],
@@ -3325,7 +3301,7 @@
     "In the 2009 Malaysian Grand Prix, Jenson Button finished 1st (winner) starting from position 1, scoring 5.0 points for Brawn and set the fastest lap.",
     "In the 2009 British Grand Prix, Jenson Button finished 6th starting from position 6, scoring 3.0 points for Brawn."
    ],
-   "seconds": 12.5,
+   "seconds": 10.8,
    "expected": [
     "Brawn"
    ],
@@ -3355,7 +3331,7 @@
    "answer": "Matra had 9 wins.",
    "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Matra-Ford', 'Matra') AND position = 1",
    "sources": [],
-   "seconds": 0.3,
+   "seconds": 0.2,
    "expected": [
     9
    ],
@@ -3383,9 +3359,9 @@
    "question": "How many points did Brabham score in 1983?",
    "path": "template",
    "answer": "Brabham had 72 points in 1983.",
-   "sql": "SELECT SUM(points) FROM f1_constructor_standings WHERE season = 1983 AND constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford')",
+   "sql": "SELECT SUM(points) FROM f1_constructor_standings WHERE season = 1983 AND constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo')",
    "sources": [],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     72
    ],
@@ -3421,7 +3397,7 @@
     "At the end of the 1956 season, Juan Fangio won the drivers championship with 30.0 points and 3 wins, driving for Ferrari, from 10 races with 6 pole positions, 5 podiums and 2 races not finished.",
     "Nürburgring in Nürburg, Germany hosted 41 Formula 1 races from 1951 to 2020. The most wins there came from Michael Schumacher, with 5 wins."
    ],
-   "seconds": 20.9,
+   "seconds": 18.7,
    "expected": [
     179
    ],
@@ -3442,7 +3418,7 @@
     "In the 2006 Japanese Grand Prix, Fernando Alonso finished 1st (winner) starting from position 5, scoring 10.0 points for Renault and set the fastest lap.",
     "In the 2006 United States Grand Prix, Fernando Alonso finished 5th starting from position 5, scoring 4.0 points for Renault."
    ],
-   "seconds": 20.2,
+   "seconds": 19.1,
    "expected": [
     1108
    ],
@@ -3455,9 +3431,9 @@
    "question": "How many poles did McLaren take in the 1980s?",
    "path": "template",
    "answer": "McLaren had 37 pole positions in the 1980s.",
-   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') AND season BETWEEN 1980 AND 1989 AND grid = 1",
+   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') AND season BETWEEN 1980 AND 1989 AND grid = 1",
    "sources": [],
-   "seconds": 0.2,
+   "seconds": 0.3,
    "expected": [
     37
    ],
@@ -3485,7 +3461,7 @@
    "question": "Which driver took the most poles in 1992?",
    "path": "template",
    "answer": "Nigel Mansell had the most pole positions in 1992, with 14.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 1992 AND grid = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season = 1992 AND grid = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -3529,7 +3505,7 @@
     "At the end of the 1963 season, Jack Brabham was 7th in the drivers championship with 14.0 points and 0 wins, driving for Lotus-Climax and Brabham, from 10 races with 0 pole positions, 1 podium and 5 races not finished.",
     "At the end of the 1965 season, Jack Brabham was 10th in the drivers championship with 9.0 points and 0 wins, driving for Brabham-Climax, from 7 races with 0 pole positions, 1 podium and 3 races not finished."
    ],
-   "seconds": 0.2,
+   "seconds": 0.3,
    "expected": [
     35
    ],
@@ -3546,11 +3522,11 @@
    "sources": [
     "Lewis Hamilton raced in Formula 1 from 2007 to 2026, entering 398 races for McLaren, Mercedes and Ferrari, with 106 wins, 104 pole positions, 208 podiums and 5259.5 points. Lewis Hamilton won 7 drivers championships (2008, 2014, 2015, 2017, 2018, 2019 and 2020).",
     "Max Verstappen raced in Formula 1 from 2015 to 2026, entering 251 races for Toro Rosso and Red Bull, with 73 wins, 50 pole positions, 137 podiums and 3680.5 points. Max Verstappen won 4 drivers championships (2021, 2022, 2023 and 2024).",
-    "At the end of the 2022 season, Lewis Hamilton was 6th in the drivers championship with 240.0 points and 0 wins, driving for Mercedes, from 22 races with 0 pole positions, 9 podiums and 2 races not finished.",
+    "Jos Verstappen raced in Formula 1 from 1994 to 2003, entering 107 races for Benetton, Simtek, Footwork, Tyrrell, Stewart, Arrows and Minardi, with 0 wins, 0 pole positions, 2 podiums and 17 points.",
     "The 2019 Hungarian Grand Prix at Hungaroring in Budapest, Hungary was won by Lewis Hamilton for Mercedes, with Max Verstappen on pole position, and the podium was Lewis Hamilton, Max Verstappen and Sebastian Vettel.",
-    "In the 2020 Emilia Romagna Grand Prix, Lewis Hamilton finished 1st (winner) starting from position 2, scoring 26.0 points for Mercedes and set the fastest lap."
+    "At the end of the 1994 season, Jos Verstappen was 10th in the drivers championship with 10.0 points and 0 wins, driving for Benetton, from 10 races with 0 pole positions, 2 podiums and 6 races not finished."
    ],
-   "seconds": 0.3,
+   "seconds": 0.4,
    "expected": [
     106
    ],
@@ -3571,7 +3547,7 @@
     "In the 2007 Spanish Grand Prix, Kimi Räikkönen retired (Suspension), grid position 3, scoring 0.0 points for Ferrari.",
     "In the 2007 Italian Grand Prix, Kimi Räikkönen finished 3rd starting from position 5, scoring 6.0 points for Ferrari."
    ],
-   "seconds": 0.1,
+   "seconds": 0.2,
    "expected": [
     6
    ],
@@ -3613,7 +3589,7 @@
     "In the 2021 Hungarian Grand Prix, Pierre Gasly finished 5th starting from position 5, scoring 11.0 points for AlphaTauri and set the fastest lap.",
     "In the 2021 Hungarian Grand Prix, Nikita Mazepin retired (Collision), grid position 19, scoring 0.0 points for Haas F1 Team."
    ],
-   "seconds": 0.3,
+   "seconds": 0.4,
    "expected": [
     "Esteban Ocon"
    ],
@@ -3733,7 +3709,7 @@
     "The 1953 Italian Grand Prix at Autodromo Nazionale di Monza in Monza, Italy was won by Juan Fangio for Maserati, with Alberto Ascari on pole position, and the podium was Juan Fangio, Nino Farina and Luigi Villoresi.",
     "The 1965 Italian Grand Prix at Autodromo Nazionale di Monza in Monza, Italy was won by Jackie Stewart for BRM, with Jim Clark on pole position, and the podium was Jackie Stewart, Graham Hill and Dan Gurney."
    ],
-   "seconds": 52.0,
+   "seconds": 42.4,
    "expected": [
     "Phil Hill"
    ],
@@ -3754,7 +3730,7 @@
     "The 2023 Azerbaijan Grand Prix at Baku City Circuit in Baku, Azerbaijan was won by Sergio Pérez for Red Bull, with Charles Leclerc on pole position, and the podium was Sergio Pérez, Max Verstappen and Charles Leclerc.",
     "The 2022 Azerbaijan Grand Prix at Baku City Circuit in Baku, Azerbaijan was won by Max Verstappen for Red Bull, with Charles Leclerc on pole position, and the podium was Max Verstappen, Sergio Pérez and George Russell."
    ],
-   "seconds": 31.2,
+   "seconds": 23.2,
    "expected": [
     "Russell"
    ],
@@ -3790,7 +3766,7 @@
     "Mike Hawthorn raced in Formula 1 from 1952 to 1958, entering 48 races for Cooper, Ferrari, Vanwall, Maserati and BRM, with 3 wins, 4 pole positions, 18 podiums and 127.64 points. Mike Hawthorn won 1 drivers championship (1958).",
     "In the 1958 Portuguese Grand Prix, Mike Hawthorn finished 2nd starting from position 2, scoring 7.0 points for Ferrari."
    ],
-   "seconds": 15.1,
+   "seconds": 11.0,
    "expected": [
     "Ferrari"
    ],
@@ -3826,7 +3802,7 @@
     "In the 2010 constructors championship, Mercedes finished 4th with 214.0 points and 0 wins.",
     "In the 2010 constructors championship, Lotus finished 10th with 0.0 points and 0 wins."
    ],
-   "seconds": 11.1,
+   "seconds": 6.7,
    "expected": [
     "Red Bull"
    ],
@@ -3847,7 +3823,7 @@
     "In the 2007 United States Grand Prix, Lewis Hamilton finished 1st (winner) starting from position 1, scoring 10.0 points for McLaren.",
     "In the 2007 Australian Grand Prix, Lewis Hamilton finished 3rd starting from position 4, scoring 6.0 points for McLaren."
    ],
-   "seconds": 0.4,
+   "seconds": 0.3,
    "expected": [
     7
    ],
@@ -3877,7 +3853,7 @@
    "answer": "Juan Fangio had 24 wins.",
    "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Juan Fangio' AND position = 1",
    "sources": [],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     24
    ],
@@ -3892,7 +3868,7 @@
    "answer": "Benetton had 27 wins.",
    "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('Benetton') AND position = 1",
    "sources": [],
-   "seconds": 0.3,
+   "seconds": 0.1,
    "expected": [
     27
    ],
@@ -3943,7 +3919,7 @@
     "The 1982 United States Grand Prix West at Long Beach in California, USA was won by Niki Lauda for McLaren, with Andrea de Cesaris on pole position, and the podium was Niki Lauda, Keke Rosberg and Riccardo Patrese.",
     "The 1982 Monaco Grand Prix at Circuit de Monaco in Monte Carlo, Monaco was won by Riccardo Patrese for Brabham, with René Arnoux on pole position, and the podium was Riccardo Patrese, Didier Pironi and Andrea de Cesaris."
    ],
-   "seconds": 29.9,
+   "seconds": 18.0,
    "expected": [
     11
    ],
@@ -3956,9 +3932,9 @@
    "question": "How many wins did Kimi Raikkonen get during his time at Lotus?",
    "path": "template",
    "answer": "Kimi Räikkönen for Lotus had 2 wins.",
-   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Kimi Räikkönen' AND constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus F1', 'Lotus-Pratt & Whitney', 'Lotus') AND position = 1",
+   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Kimi Räikkönen' AND constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus F1', 'Lotus-Ford', 'Lotus-Maserati', 'Lotus') AND position = 1",
    "sources": [],
-   "seconds": 0.1,
+   "seconds": 0.0,
    "expected": [
     2
    ],
@@ -3986,9 +3962,9 @@
    "question": "How many Grands Prix did McLaren win during the 1990s?",
    "path": "template",
    "answer": "McLaren had 43 wins in the 1990s.",
-   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') AND season BETWEEN 1990 AND 1999 AND position = 1",
+   "sql": "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') AND season BETWEEN 1990 AND 1999 AND position = 1",
    "sources": [],
-   "seconds": 0.3,
+   "seconds": 0.2,
    "expected": [
     43
    ],
@@ -4003,7 +3979,7 @@
    "answer": "There were 45 pit stops in the 2019 Brazilian Grand Prix.",
    "sql": "SELECT COUNT(*) FROM f1_pit_stops WHERE season = 2019 AND round = 20",
    "sources": [],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     45
    ],
@@ -4024,7 +4000,7 @@
     "In the 1976 Italian Grand Prix, Emerson Fittipaldi finished 15th starting from position 20, scoring 0.0 points for Fittipaldi.",
     "In the 1977 French Grand Prix, Emerson Fittipaldi finished 11th starting from position 22, scoring 0.0 points for Fittipaldi."
    ],
-   "seconds": 0.5,
+   "seconds": 0.4,
    "expected": [
     14
    ],
@@ -4045,7 +4021,7 @@
     "The 1970 South African Grand Prix at Kyalami in Midrand, South Africa was won by Jack Brabham for Brabham, with Jackie Stewart on pole position, and the podium was Jack Brabham, Denny Hulme and Jackie Stewart.",
     "In the 2013 Abu Dhabi Grand Prix, Kimi Räikkönen retired (Accident), grid position 22, scoring 0.0 points for Lotus F1."
    ],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     20
    ],
@@ -4066,7 +4042,7 @@
     "In the 2009 constructors championship, Brawn won the title with 172.0 points and 8 wins.",
     "In the 1958 British Grand Prix, Cliff Allison retired (Engine), grid position 5, scoring 0.0 points for Team Lotus."
    ],
-   "seconds": 0.5,
+   "seconds": 0.3,
    "expected": [
     8
    ],
@@ -4087,7 +4063,7 @@
     "The 2003 Malaysian Grand Prix at Sepang International Circuit in Kuala Lumpur, Malaysia was won by Kimi Räikkönen for McLaren, with Fernando Alonso on pole position, and the podium was Kimi Räikkönen, Rubens Barrichello and Fernando Alonso.",
     "At the end of the 2003 season, Kimi Räikkönen was 2nd in the drivers championship with 91.0 points and 1 win, driving for McLaren, from 16 races with 2 pole positions, 10 podiums and 3 races not finished."
    ],
-   "seconds": 0.6,
+   "seconds": 0.3,
    "expected": [
     32
    ],
@@ -4108,7 +4084,7 @@
     "The 2025 Dutch Grand Prix at Circuit Park Zandvoort in Zandvoort, Netherlands was won by Oscar Piastri for McLaren, with Oscar Piastri on pole position, and the podium was Oscar Piastri, Max Verstappen and Isack Hadjar.",
     "In the 2026 Dutch Grand Prix, Lance Stroll retired, grid position 19, scoring 0.0 points for Aston Martin."
    ],
-   "seconds": 0.6,
+   "seconds": 0.3,
    "expected": [
     "Lando Norris"
    ],
@@ -4129,7 +4105,7 @@
     "In the 2003 Canadian Grand Prix, Juan Pablo Montoya finished 3rd starting from position 2, scoring 6.0 points for Williams.",
     "In the 2003 United States Grand Prix, Juan Pablo Montoya finished 6th starting from position 4, scoring 3.0 points for Williams."
    ],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     82
    ],
@@ -4150,7 +4126,7 @@
     "In the 1983 constructors championship, Tyrrell finished 7th with 12.0 points and 1 win.",
     "The 1967 South African Grand Prix at Kyalami in Midrand, South Africa was won by Pedro Rodríguez for Cooper-Maserati, with Jack Brabham on pole position, and the podium was Pedro Rodríguez, John Love and John Surtees."
    ],
-   "seconds": 0.4,
+   "seconds": 0.3,
    "expected": [
     23
    ],
@@ -4249,7 +4225,7 @@
     "The 1964 German Grand Prix at Nürburgring in Nürburg, Germany was won by John Surtees for Ferrari, with John Surtees on pole position, and the podium was John Surtees, Graham Hill and Lorenzo Bandini.",
     "The 1962 German Grand Prix at Nürburgring in Nürburg, Germany was won by Graham Hill for BRM, with Dan Gurney on pole position, and the podium was Graham Hill, John Surtees and Dan Gurney."
    ],
-   "seconds": 18.7,
+   "seconds": 15.4,
    "expected": [
     "Fangio"
    ],
@@ -4270,7 +4246,7 @@
     "The 1992 Japanese Grand Prix at Suzuka Circuit in Suzuka, Japan was won by Riccardo Patrese for Williams, with Nigel Mansell on pole position, and the podium was Riccardo Patrese, Gerhard Berger and Martin Brundle.",
     "The 1989 Japanese Grand Prix at Suzuka Circuit in Suzuka, Japan was won by Alessandro Nannini for Benetton, with Ayrton Senna on pole position, and the podium was Alessandro Nannini, Riccardo Patrese and Thierry Boutsen."
    ],
-   "seconds": 19.9,
+   "seconds": 20.1,
    "expected": [
     "Senna"
    ],
@@ -4291,7 +4267,7 @@
     "The 1973 German Grand Prix at Nürburgring in Nürburg, Germany was won by Jackie Stewart for Tyrrell, with Jackie Stewart on pole position, and the podium was Jackie Stewart, François Cevert and Jacky Ickx.",
     "The 1968 German Grand Prix at Nürburgring in Nürburg, Germany was won by Jackie Stewart for Matra-Ford, with Jacky Ickx on pole position, and the podium was Jackie Stewart, Graham Hill and Jochen Rindt."
    ],
-   "seconds": 18.8,
+   "seconds": 17.4,
    "expected": [
     "Johnny Herbert"
    ],
@@ -4312,7 +4288,7 @@
     "In the 1984 Detroit Grand Prix, Niki Lauda retired (Electrical), grid position 10, scoring 0.0 points for McLaren.",
     "In the 1984 South African Grand Prix, Niki Lauda finished 1st (winner) starting from position 8, scoring 9.0 points for McLaren."
    ],
-   "seconds": 13.3,
+   "seconds": 11.5,
    "expected": [
     "McLaren"
    ],
@@ -4323,21 +4299,15 @@
    "split": "holdout6",
    "kind": "fact",
    "question": "Who ended up as the 1970 world champion?",
-   "path": "sql>vector",
-   "answer": "Ferrari finished 2nd with 55.0 points.",
-   "sql": "SELECT driver_name FROM f1_results WHERE season = 1970 AND position = 1",
-   "sources": [
-    "In the 1970 constructors championship, March finished 3rd with 48.0 points and 1 win.",
-    "In the 1970 constructors championship, BRM finished 6th with 23.0 points and 1 win.",
-    "In the 1970 constructors championship, Surtees finished 8th with 3.0 points and 0 wins.",
-    "In the 1970 constructors championship, Matra finished 7th with 23.0 points and 0 wins.",
-    "In the 1970 constructors championship, Ferrari finished 2nd with 55.0 points and 4 wins."
-   ],
-   "seconds": 10.2,
+   "path": "template",
+   "answer": "Jochen Rindt won the 1970 drivers championship.",
+   "sql": "SELECT d.given_name || ' ' || d.family_name FROM f1_driver_standings s\n                  JOIN f1_drivers d USING (driver_id) WHERE s.season = 1970 AND s.position = 1",
+   "sources": [],
+   "seconds": 0.0,
    "expected": [
     "Rindt"
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "holdout6_06",
@@ -4354,7 +4324,7 @@
     "The 1986 Monaco Grand Prix at Circuit de Monaco in Monte Carlo, Monaco was won by Alain Prost for McLaren, with Alain Prost on pole position, and the podium was Alain Prost, Keke Rosberg and Ayrton Senna.",
     "The 1996 Monaco Grand Prix at Circuit de Monaco in Monte Carlo, Monaco was won by Olivier Panis for Ligier, with Michael Schumacher on pole position, and the podium was Olivier Panis, David Coulthard and Johnny Herbert."
    ],
-   "seconds": 22.9,
+   "seconds": 17.5,
    "expected": [
     "Isack Hadjar"
    ],
@@ -4367,7 +4337,7 @@
    "question": "Which constructor were the champions of 1973?",
    "path": "sql>vector",
    "answer": "Team Lotus.",
-   "sql": "SELECT constructor FROM f1_results WHERE season = 1973 AND position = 1",
+   "sql": "SELECT constructor FROM f1_results WHERE season = 1973",
    "sources": [
     "In the 1973 constructors championship, Team Lotus won the title with 91.0 points and 7 wins.",
     "In the 1973 constructors championship, March finished 5th with 14.0 points and 0 wins.",
@@ -4375,7 +4345,7 @@
     "In the 1973 constructors championship, McLaren finished 3rd with 58.0 points and 3 wins.",
     "In the 1973 constructors championship, Tyrrell finished 2nd with 80.0 points and 5 wins."
    ],
-   "seconds": 13.1,
+   "seconds": 8.3,
    "expected": [
     "Lotus"
    ],
@@ -4396,7 +4366,7 @@
     "In the 1967 Dutch Grand Prix, Jackie Stewart retired (Brakes), grid position 11, scoring 0.0 points for BRM.",
     "In the 1967 Dutch Grand Prix, Pedro Rodríguez retired (Gearbox), grid position 5, scoring 0.0 points for Cooper-Maserati."
    ],
-   "seconds": 12.8,
+   "seconds": 9.9,
    "expected": [
     "Jim Clark"
    ],
@@ -4417,7 +4387,7 @@
     "In the 1994 Brazilian Grand Prix, Mika Häkkinen retired (Engine), grid position 8, scoring 0.0 points for McLaren.",
     "In the 1994 Monaco Grand Prix, Mika Häkkinen retired (Collision), grid position 2, scoring 0.0 points for McLaren."
    ],
-   "seconds": 15.5,
+   "seconds": 11.4,
    "expected": [
     20
    ],
@@ -4438,7 +4408,7 @@
     "In the 1960 constructors championship, Ferrari finished 3rd with 26.0 points and 1 win.",
     "In the 1968 constructors championship, Ferrari finished 4th with 32.0 points and 1 win."
    ],
-   "seconds": 22.8,
+   "seconds": 20.2,
    "expected": [
     7
    ],
@@ -4470,11 +4440,11 @@
    "split": "holdout6",
    "kind": "aggregate",
    "question": "In 2012, how many different constructors managed to win at least one Grand Prix?",
-   "path": "sql",
-   "answer": "In 2012, six different constructors managed to win at least one Grand Prix.",
-   "sql": "SELECT COUNT(DISTINCT constructor) FROM f1_results WHERE season = 2012 AND position = 1",
+   "path": "template",
+   "answer": "6 different teams won a race in 2012.",
+   "sql": "SELECT COUNT(DISTINCT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END) FROM f1_results WHERE position = 1 AND season = 2012",
    "sources": [],
-   "seconds": 6.7,
+   "seconds": 0.0,
    "expected": [
     6
    ],
@@ -4502,7 +4472,7 @@
    "question": "Across the 1960s, which driver stood on the podium the most times?",
    "path": "template",
    "answer": "Graham Hill had the most podiums in the 1960s, with 36.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season BETWEEN 1960 AND 1969 AND position <= 3 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season BETWEEN 1960 AND 1969 AND position <= 3 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -4515,21 +4485,15 @@
    "split": "holdout6",
    "kind": "aggregate",
    "question": "What was the quickest pit stop time anyone recorded during the 2023 season?",
-   "path": "vector",
-   "answer": "Not in the context.",
-   "sql": null,
-   "sources": [
-    "In the 1959 United States Grand Prix, Maurice Trintignant finished 2nd starting from position 5, scoring 7.0 points for Cooper-Climax.",
-    "In the 2023 Singapore Grand Prix, Lance Stroll withdrew, no grid position recorded, scoring 0.0 points for Aston Martin.",
-    "In the 1962 United States Grand Prix, Maurice Trintignant retired (Brakes), grid position 19, scoring 0.0 points for Lotus-Climax.",
-    "In the 2023 Dutch Grand Prix, Kevin Magnussen finished 16th with no grid position recorded, scoring 0.0 points for Haas F1 Team.",
-    "In the 1992 Mexican Grand Prix, Karl Wendlinger retired (Collision), grid position 19, scoring 0.0 points for March."
-   ],
-   "seconds": 8.0,
+   "path": "template",
+   "answer": "The fastest pit stop in 2023 took 16.25 seconds, by Yuki Tsunoda (AlphaTauri).",
+   "sql": "SELECT p.duration, r.driver_name, r.constructor FROM f1_pit_stops p\n              JOIN f1_results r USING (season, round, driver_id) WHERE p.season = 2023 ORDER BY p.duration LIMIT 1",
+   "sources": [],
+   "seconds": 0.0,
    "expected": [
     16.25
    ],
-   "outcome": "refused"
+   "outcome": "right"
   },
   {
    "id": "holdout6_16",
@@ -4582,7 +4546,7 @@
     "In the 1950 Italian Grand Prix, Alberto Ascari retired (Engine), grid position 2, scoring 0.0 points for Ferrari.",
     "In the 1953 Italian Grand Prix, Alberto Ascari retired (Accident), grid position 1, scoring 0.0 points for Ferrari."
    ],
-   "seconds": 15.7,
+   "seconds": 14.9,
    "expected": [
     13
    ],
@@ -4635,9 +4599,9 @@
    "split": "holdout6",
    "kind": "narrative",
    "question": "Nigel Mansell vs Nelson Piquet - who had the better Formula 1 career?",
-   "path": "sql>vector",
-   "answer": "Nelson Piquet had the better Formula 1 career.",
-   "sql": "SELECT driver_name, points FROM f1_results WHERE driver_name IN ('Nigel Mansell', 'Nelson Piquet')",
+   "path": "vector",
+   "answer": "Nigel Mansell raced in Formula 1 from 1980 to 1995, entering 190 races for Team Lotus, Williams, Ferrari and McLaren, with 31 wins, 32 pole positions, 59 podiums and 482 points. Nigel Mansell won 1 drivers championship (1992). Nelson Piquet raced in Formula 1 from 1978 to 1991, entering 205 races for Ensign, McLaren, Brabham, Williams, Team Lotus and Benetton, with 23 wins, 24 pole positions, 60 podiums and 485.5 points. Nelson Piquet won 3 drivers championships (1981, 1983 and 1987).",
+   "sql": null,
    "sources": [
     "Nigel Mansell raced in Formula 1 from 1980 to 1995, entering 190 races for Team Lotus, Williams, Ferrari and McLaren, with 31 wins, 32 pole positions, 59 podiums and 482 points. Nigel Mansell won 1 drivers championship (1992).",
     "Nelson Piquet raced in Formula 1 from 1978 to 1991, entering 205 races for Ensign, McLaren, Brabham, Williams, Team Lotus and Benetton, with 23 wins, 24 pole positions, 60 podiums and 485.5 points. Nelson Piquet won 3 drivers championships (1981, 1983 and 1987).",
@@ -4645,11 +4609,11 @@
     "The 1989 Brazilian Grand Prix at Autódromo Internacional Nelson Piquet in Rio de Janeiro, Brazil was won by Nigel Mansell for Ferrari, with Ayrton Senna on pole position, and the podium was Nigel Mansell, Alain Prost and Maurício Gugelmin.",
     "In the 1984 Portuguese Grand Prix, Nelson Piquet finished 6th starting from position 1, scoring 1.0 points for Brabham."
    ],
-   "seconds": 19.2,
+   "seconds": 0.3,
    "expected": [
     31
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "holdout6_22",
@@ -4666,7 +4630,7 @@
     "In the 2016 constructors championship, Haas F1 Team finished 8th with 29.0 points and 0 wins.",
     "In the 2013 constructors championship, Lotus F1 finished 4th with 315.0 points and 1 win."
    ],
-   "seconds": 0.2,
+   "seconds": 0.1,
    "expected": [
     "Lewis Hamilton"
    ],
@@ -4807,7 +4771,7 @@
     "In the 1971 Austrian Grand Prix, Jacky Ickx retired (Engine), grid position 6, scoring 0.0 points for Ferrari.",
     "In the 1971 Austrian Grand Prix, Clay Regazzoni retired (Engine), grid position 4, scoring 0.0 points for Ferrari."
    ],
-   "seconds": 15.8,
+   "seconds": 12.2,
    "expected": [
     "Jo Siffert"
    ],
@@ -4828,7 +4792,7 @@
     "In the 1997 German Grand Prix, Heinz-Harald Frentzen retired (Collision), grid position 5, scoring 0.0 points for Williams.",
     "The 1988 Spanish Grand Prix at Circuito de Jerez in Jerez de la Frontera, Spain was won by Alain Prost for McLaren, with Ayrton Senna on pole position, and the podium was Alain Prost, Nigel Mansell and Alessandro Nannini."
    ],
-   "seconds": 24.2,
+   "seconds": 22.0,
    "expected": [
     "Jacques Villeneuve"
    ],
@@ -4849,7 +4813,7 @@
     "In the 1959 Monaco Grand Prix, Bruce McLaren finished 5th starting from position 13, scoring 2.0 points for Cooper-Climax.",
     "In the 1959 French Grand Prix, Bruce McLaren finished 5th starting from position 10, scoring 2.0 points for Cooper-Climax."
    ],
-   "seconds": 21.8,
+   "seconds": 20.4,
    "expected": [
     "Maurice Trintignant"
    ],
@@ -4906,7 +4870,7 @@
     "The 1992 British Grand Prix at Silverstone Circuit in Silverstone, UK was won by Nigel Mansell for Williams, with Nigel Mansell on pole position, and the podium was Nigel Mansell, Riccardo Patrese and Martin Brundle.",
     "The 1985 British Grand Prix at Silverstone Circuit in Silverstone, UK was won by Alain Prost for McLaren, with Keke Rosberg on pole position, and the podium was Alain Prost, Michele Alboreto and Jacques Laffite."
    ],
-   "seconds": 36.3,
+   "seconds": 31.7,
    "expected": [
     "Charles Leclerc"
    ],
@@ -4979,7 +4943,7 @@
    "question": "Who collected the most podium finishes between 2000 and 2009?",
    "path": "template",
    "answer": "Michael Schumacher had the most podiums from 2000 to 2009, with 83.",
-   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season BETWEEN 2000 AND 2009 AND position <= 3 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE season BETWEEN 2000 AND 2009 AND position <= 3 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -5002,7 +4966,7 @@
     "Circuit de Nevers Magny-Cours in Magny Cours, France hosted 18 Formula 1 races from 1991 to 2008. The most wins there came from Michael Schumacher, with 8 wins.",
     "In the 1970 Italian Grand Prix, Jochen Rindt suffered a fatal accident while driving for Team Lotus."
    ],
-   "seconds": 17.5,
+   "seconds": 17.4,
    "expected": [
     7
    ],
@@ -5030,7 +4994,7 @@
    "question": "Which team started from pole most often during the 2010s?",
    "path": "template",
    "answer": "Mercedes had the most pole positions in the 2010s, with 103.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 2010 AND 2019 AND grid = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 2010 AND 2019 AND grid = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0,
    "expected": [
@@ -5044,16 +5008,16 @@
    "kind": "aggregate",
    "question": "What's McLaren's points tally in the 2026 constructors' standings after round 18?",
    "path": "sql>vector",
-   "answer": "McLaren's points tally in the 2026 constructors' standings after round 18 is 355.0 points.",
+   "answer": "McLaren was 4th with 355.0 points after round 18 of the 2026 constructors championship.",
    "sql": "SELECT d.given_name || ' ' || d.family_name, s.points FROM f1_driver_standings s JOIN f1_drivers d USING (driver_id) WHERE s.season = 2026 AND s.round = 18 AND d.constructor LIKE '%McLaren%' ORDER BY s.points DESC LIMIT 1",
    "sources": [
+    "After round 18 of the 2026 constructors championship, McLaren was 4th with 355.0 points and 2 wins.",
     "After round 18 of the 2026 season, Lando Norris was 6th in the drivers championship with 211.0 points and 2 wins, driving for McLaren, from 18 races with 3 pole positions, 5 podiums and 4 races not finished.",
     "After round 18 of the 2026 season, Oscar Piastri was 7th in the drivers championship with 144.0 points and 0 wins, driving for McLaren, from 18 races with 0 pole positions, 2 podiums and 3 races not finished.",
-    "After round 18 of the 2026 constructors championship, McLaren was 4th with 355.0 points and 2 wins.",
     "After round 18 of the 2026 constructors championship, Ferrari was 2nd with 474.0 points and 2 wins.",
     "In the 1984 constructors championship, McLaren won the title with 143.5 points and 12 wins."
    ],
-   "seconds": 40.6,
+   "seconds": 40.5,
    "expected": [
     355
    ],
@@ -5065,20 +5029,20 @@
    "kind": "aggregate",
    "question": "Of the 18 races run so far in 2026, how many have been won by a Mercedes?",
    "path": "sql>vector",
-   "answer": "Andrea Kimi Antonelli and George Russell both drove for Mercedes, and both won 9 races each.",
+   "answer": "12 races have been won by a Mercedes.",
    "sql": "SELECT COUNT(*) FROM f1_results WHERE season = 2026 AND constructor = 'Mercedes'",
    "sources": [
+    "After round 18 of the 2026 constructors championship, Mercedes was 1st with 607.0 points and 12 wins.",
     "After round 18 of the 2026 season, Andrea Kimi Antonelli led the drivers championship with 365.0 points and 9 wins, driving for Mercedes, from 18 races with 7 pole positions, 15 podiums and 1 race not finished.",
     "After round 18 of the 2026 season, George Russell was 2nd in the drivers championship with 242.0 points and 3 wins, driving for Mercedes, from 18 races with 5 pole positions, 8 podiums and 3 races not finished.",
-    "After round 18 of the 2026 constructors championship, Mercedes was 1st with 607.0 points and 12 wins.",
     "Andrea Kimi Antonelli raced in Formula 1 from 2025 to 2026, entering 42 races for Mercedes, with 9 wins, 7 pole positions, 18 podiums and 515 points.",
     "After round 18 of the 2026 season, Gabriel Bortoleto was 15th in the drivers championship with 10.0 points and 0 wins, driving for Audi, from 18 races with 0 pole positions, 0 podiums and 2 races not finished."
    ],
-   "seconds": 13.9,
+   "seconds": 13.8,
    "expected": [
     12
    ],
-   "outcome": "wrong"
+   "outcome": "right"
   },
   {
    "id": "holdout7_17",
@@ -5110,7 +5074,7 @@
     "In the 1966 United States Grand Prix, Jochen Rindt retired (Out of fuel) but was classified 2nd, grid position 9, scoring 6.0 points for Cooper-Maserati.",
     "In the 1968 Monaco Grand Prix, Jochen Rindt retired (Accident), grid position 5, scoring 0.0 points for Brabham-Repco."
    ],
-   "seconds": 25.2,
+   "seconds": 22.1,
    "expected": [
     1970
    ],
@@ -5194,7 +5158,7 @@
     "In the 1986 Australian Grand Prix, Nigel Mansell retired (Tyre), grid position 1, scoring 0.0 points for Williams.",
     "In the 1986 Australian Grand Prix, Gerhard Berger retired (Engine), grid position 6, scoring 0.0 points for Benetton."
    ],
-   "seconds": 0.3,
+   "seconds": 0.2,
    "expected": [
     "Alain Prost"
    ],
@@ -5322,7 +5286,547 @@
     "In the 2022 constructors championship, Mercedes finished 3rd with 515.0 points and 1 win.",
     "In the 2026 Austrian Grand Prix, Lance Stroll retired, grid position 22, scoring 0.0 points for Aston Martin."
    ],
-   "seconds": 13.5,
+   "seconds": 12.9,
+   "expected": [],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_01",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "Back in 1962 the title was settled at the very last race in South Africa - who won that South African Grand Prix?",
+   "path": "sql>vector",
+   "answer": "Graham Hill won the 1962 South African Grand Prix.",
+   "sql": "SELECT driver_name, season, round, race_name, points FROM f1_results WHERE season = 1962 AND race_name = 'South African Grand Prix'",
+   "sources": [
+    "The 1962 South African Grand Prix at Prince George Circuit in Eastern Cape Province, South Africa was won by Graham Hill for BRM, with Jim Clark on pole position, and the podium was Graham Hill, Bruce McLaren and Tony Maggs.",
+    "The 1963 South African Grand Prix at Prince George Circuit in Eastern Cape Province, South Africa was won by Jim Clark for Lotus-Climax, with Jim Clark on pole position, and the podium was Jim Clark, Dan Gurney and Graham Hill.",
+    "The 1969 South African Grand Prix at Kyalami in Midrand, South Africa was won by Jackie Stewart for Matra-Ford, with Jack Brabham on pole position, and the podium was Jackie Stewart, Graham Hill and Denny Hulme.",
+    "The 1972 South African Grand Prix at Kyalami in Midrand, South Africa was won by Denny Hulme for McLaren, with Jackie Stewart on pole position, and the podium was Denny Hulme, Emerson Fittipaldi and Peter Revson.",
+    "The 1965 South African Grand Prix at Prince George Circuit in Eastern Cape Province, South Africa was won by Jim Clark for Lotus-Climax, with Jim Clark on pole position, and the podium was Jim Clark, John Surtees and Graham Hill."
+   ],
+   "seconds": 17.8,
+   "expected": [
+    "Graham Hill"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_02",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "who won the caesars palace gp in 1981? the one in the vegas car park",
+   "path": "sql>vector",
+   "answer": "Alan Jones won the 1981 Caesars Palace Grand Prix.",
+   "sql": "SELECT driver_name, season, round, race_name, points FROM f1_results WHERE race_name = 'Caesars Palace GP' AND season = 1981",
+   "sources": [
+    "The 1981 Caesars Palace Grand Prix at Las Vegas Street Circuit in Nevada, USA was won by Alan Jones for Williams, with Carlos Reutemann on pole position, and the podium was Alan Jones, Alain Prost and Bruno Giacomelli.",
+    "In the 1981 Caesars Palace Grand Prix, Michele Alboreto retired (Engine), grid position 17, scoring 0.0 points for Tyrrell.",
+    "In the 1981 Caesars Palace Grand Prix, Gilles Villeneuve was disqualified, grid position 3, scoring 0.0 points for Ferrari.",
+    "In the 1981 Caesars Palace Grand Prix, Hector Rebaque retired (Throttle), grid position 16, scoring 0.0 points for Brabham.",
+    "In the 1981 Caesars Palace Grand Prix, Marc Surer retired (Suspension), grid position 23, scoring 0.0 points for Theodore."
+   ],
+   "seconds": 14.1,
+   "expected": [
+    "Alan Jones"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_03",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "Jacques Villeneuve's debut was the 1996 Australian GP in Melbourne. What position did he finish in?",
+   "path": "vector",
+   "answer": "In the 1996 Australian Grand Prix, Jacques Villeneuve finished 2nd starting from position 1, scoring 6.0 points for Williams. The 1996 Australian Grand Prix at Albert Park Grand Prix Circuit in Melbourne, Australia was won by Damon Hill for Williams, with Jacques Villeneuve on pole position, and the podium was Damon Hill, Jacques Villeneuve and Eddie Irvine.",
+   "sql": null,
+   "sources": [
+    "In the 1996 Australian Grand Prix, Jacques Villeneuve finished 2nd starting from position 1, scoring 6.0 points for Williams.",
+    "The 1996 Australian Grand Prix at Albert Park Grand Prix Circuit in Melbourne, Australia was won by Damon Hill for Williams, with Jacques Villeneuve on pole position, and the podium was Damon Hill, Jacques Villeneuve and Eddie Irvine.",
+    "In the 1996 Argentine Grand Prix, Jacques Villeneuve finished 2nd starting from position 3, scoring 6.0 points for Williams.",
+    "In the 1996 Canadian Grand Prix, Jacques Villeneuve finished 2nd starting from position 2, scoring 6.0 points for Williams.",
+    "In the 1996 French Grand Prix, Jacques Villeneuve finished 2nd starting from position 6, scoring 6.0 points for Williams."
+   ],
+   "seconds": 0.3,
+   "expected": [
+    2
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_04",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "Which outfit topped the constructors' table in 1967?",
+   "path": "template",
+   "answer": "Brabham-Repco won the 1967 constructors championship.",
+   "sql": "SELECT constructor FROM f1_constructor_standings WHERE season = 1967 AND position = 1",
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [
+    "Brabham"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_05",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "Settling a bet here: who was the Formula 1 world drivers' champion in 1964?",
+   "path": "template",
+   "answer": "John Surtees won the 1964 drivers championship.",
+   "sql": "SELECT d.given_name || ' ' || d.family_name FROM f1_driver_standings s\n                  JOIN f1_drivers d USING (driver_id) WHERE s.season = 1964 AND s.position = 1",
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [
+    "Surtees"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_06",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "Keke Rosberg won the championship in 1982 - what team was he driving for that year?",
+   "path": "vector",
+   "answer": "At the end of the 1982 season, Keke Rosberg won the drivers championship with 44.0 points and 1 win, driving for Williams, from 15 races with 1 pole position, 6 podiums and 4 races not finished.",
+   "sql": null,
+   "sources": [
+    "At the end of the 1982 season, Keke Rosberg won the drivers championship with 44.0 points and 1 win, driving for Williams, from 15 races with 1 pole position, 6 podiums and 4 races not finished.",
+    "Keke Rosberg raced in Formula 1 from 1978 to 1986, entering 114 races for Theodore, ATS, Wolf, Fittipaldi, Williams and McLaren, with 5 wins, 5 pole positions, 17 podiums and 159.5 points. Keke Rosberg won 1 drivers championship (1982).",
+    "In the 1982 Monaco Grand Prix, Keke Rosberg retired (Collision), grid position 6, scoring 0.0 points for Williams.",
+    "In the 1982 Dutch Grand Prix, Keke Rosberg finished 3rd starting from position 7, scoring 4.0 points for Williams.",
+    "In the 1982 Detroit Grand Prix, Keke Rosberg finished 4th starting from position 3, scoring 3.0 points for Williams."
+   ],
+   "seconds": 0.2,
+   "expected": [
+    "Williams"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_07",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "Who put it on pole for the Italian GP at Monza this season (2026)?",
+   "path": "sql>vector",
+   "answer": "Pierre Gasly.",
+   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Jim Clark' AND grid = 1",
+   "sources": [
+    "The 2026 Italian Grand Prix at Autodromo Nazionale di Monza in Monza, Italy was won by Andrea Kimi Antonelli for Mercedes, with Pierre Gasly on pole position, and the podium was Andrea Kimi Antonelli, George Russell and Max Verstappen.",
+    "In the 2022 Emilia Romagna Grand Prix, Carlos Sainz retired (Collision), grid position 4, scoring 0.0 points for Ferrari.",
+    "In the 2022 Austrian Grand Prix, Carlos Sainz retired (Power Unit), grid position 3, scoring 0.0 points for Ferrari.",
+    "The 1953 Italian Grand Prix at Autodromo Nazionale di Monza in Monza, Italy was won by Juan Fangio for Maserati, with Alberto Ascari on pole position, and the podium was Juan Fangio, Nino Farina and Luigi Villoresi.",
+    "In the 2022 United States Grand Prix, Carlos Sainz retired (Collision damage), grid position 1, scoring 0.0 points for Ferrari."
+   ],
+   "seconds": 21.3,
+   "expected": [
+    "Pierre Gasly"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_08",
+   "split": "holdout8",
+   "kind": "fact",
+   "question": "Monaco 1981, who started from pole position?",
+   "path": "template",
+   "answer": "Nelson Piquet (Brabham) started on pole at the 1981 Monaco Grand Prix.",
+   "sql": "SELECT driver_name, constructor FROM f1_results WHERE season = 1981 AND round = 6 AND grid = 1",
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [
+    "Nelson Piquet"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_09",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "How many Grands Prix did Gilles Villeneuve win before his death in 1982?",
+   "path": "sql",
+   "answer": "Gilles Villeneuve won 6 Grands Prix before his death in 1982.",
+   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Gilles Villeneuve' AND season < 1982 AND position = 1",
+   "sources": [
+    "The 1982 Canadian Grand Prix at Circuit Gilles Villeneuve in Montreal, Canada was won by Nelson Piquet for Brabham, with Didier Pironi on pole position, and the podium was Nelson Piquet, Riccardo Patrese and John Watson.",
+    "In the 1982 San Marino Grand Prix, Gilles Villeneuve finished 2nd starting from position 3, scoring 6.0 points for Ferrari.",
+    "In the 1982 Brazilian Grand Prix, Gilles Villeneuve retired (Spun off), grid position 2, scoring 0.0 points for Ferrari.",
+    "In the 1982 South African Grand Prix, Gilles Villeneuve retired (Turbo), grid position 3, scoring 0.0 points for Ferrari.",
+    "In the 1982 United States Grand Prix West, Gilles Villeneuve was disqualified, grid position 7, scoring 0.0 points for Ferrari."
+   ],
+   "seconds": 15.2,
+   "expected": [
+    6
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_10",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "During his years at Ferrari, how many times did Rubens Barrichello finish on the podium?",
+   "path": "template",
+   "answer": "Rubens Barrichello for Ferrari had 55 podiums.",
+   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Rubens Barrichello' AND constructor IN ('Ferrari') AND position <= 3",
+   "sources": [],
+   "seconds": 0.1,
+   "expected": [
+    55
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_11",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "what was the avg pit stop duration at monaco 2024",
+   "path": "template",
+   "answer": "The average pit stop in the 2024 Monaco Grand Prix took 24.77 seconds, leaving out red flag stoppages.",
+   "sql": "SELECT AVG(duration) FROM f1_pit_stops WHERE season = 2024 AND duration <= 120 AND round = 8",
+   "sources": [],
+   "seconds": 0.2,
+   "expected": [
+    24.77
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_12",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "Since sprints were introduced in 2021, how many sprint races have Red Bull won?",
+   "path": "sql>vector",
+   "answer": "Not in the context.",
+   "sql": "SELECT COUNT(DISTINCT race_name) FROM f1_results WHERE season = 2021 AND constructor = 'Red Bull' AND race_name = 'Sprint Race'",
+   "sources": [
+    "In the 2021 constructors championship, Red Bull finished 2nd with 585.5 points and 11 wins.",
+    "At the end of the 2021 season, Max Verstappen won the drivers championship with 395.5 points and 10 wins, driving for Red Bull, from 22 races with 10 pole positions, 18 podiums and 3 races not finished.",
+    "At the end of the 2021 season, Sergio Pérez was 4th in the drivers championship with 190.0 points and 1 win, driving for Red Bull, from 22 races with 0 pole positions, 5 podiums and 3 races not finished.",
+    "In the 2022 constructors championship, Red Bull won the title with 759.0 points and 17 wins.",
+    "In the 2011 constructors championship, Red Bull won the title with 650.0 points and 12 wins."
+   ],
+   "seconds": 11.6,
+   "expected": [
+    15
+   ],
+   "outcome": "refused"
+  },
+  {
+   "id": "holdout8_13",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "Vanwall were only around for a few seasons in the 50s. How many world championship races did they win in total?",
+   "path": "sql>vector",
+   "answer": "Vanwall won 6 world championship races in total.",
+   "sql": "SELECT COUNT(*) FROM f1_results WHERE race_name = 'Vanwall'",
+   "sources": [
+    "Vanwall raced in Formula 1 from 1954 to 1960, entering 29 races, with 9 wins, 7 pole positions and 108 points. Vanwall won 1 constructors championship (1958). Its most race wins came from Stirling Moss, with 6 wins.",
+    "In the 1958 constructors championship, Vanwall won the title with 48.0 points and 6 wins.",
+    "At the end of the 1957 season, Tony Brooks was 5th in the drivers championship with 11.0 points and 1 win, driving for Vanwall, from 6 races with 1 pole position, 2 podiums and 2 races not finished.",
+    "At the end of the 1958 season, Tony Brooks was 3rd in the drivers championship with 24.0 points and 3 wins, driving for Vanwall, from 10 races with 1 pole position, 3 podiums and 6 races not finished.",
+    "At the end of the 1956 season, Harry Schell was 17th in the drivers championship with 3.0 points and 0 wins, driving for Vanwall and Maserati, from 7 races with 0 pole positions, 0 podiums and 5 races not finished."
+   ],
+   "seconds": 17.9,
+   "expected": [
+    9
+   ],
+   "outcome": "wrong"
+  },
+  {
+   "id": "holdout8_14",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "How many world championship Grands Prix were held at Brands Hatch?",
+   "path": "template",
+   "answer": "There were 14 races at Brands Hatch.",
+   "sql": "SELECT COUNT(*) FROM f1_races r JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = 'Brands Hatch' AND (r.season, r.round) IN (SELECT season, round FROM f1_results)",
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [
+    14
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_15",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "What was Jacques Villeneuve's final points total in the 1997 drivers' championship?",
+   "path": "sql>vector",
+   "answer": "Jacques Villeneuve scored 81.0 points for the 1997 drivers' championship.",
+   "sql": "SELECT d.given_name || ' ' || d.family_name, s.points FROM f1_driver_standings s JOIN f1_drivers d USING (driver_id) WHERE s.season = 1997 AND d.family_name = 'Villeneuve' ORDER BY s.points DESC LIMIT 1",
+   "sources": [
+    "The 1997 Canadian Grand Prix at Circuit Gilles Villeneuve in Montreal, Canada was won by Michael Schumacher for Ferrari, with Michael Schumacher on pole position, and the podium was Michael Schumacher, Jean Alesi and Giancarlo Fisichella.",
+    "In the 1997 European Grand Prix, Jacques Villeneuve finished 3rd starting from position 1, scoring 4.0 points for Williams.",
+    "In the 1997 Belgian Grand Prix, Jacques Villeneuve finished 5th starting from position 1, scoring 2.0 points for Williams.",
+    "At the end of the 1997 season, Jacques Villeneuve won the drivers championship with 81.0 points and 7 wins, driving for Williams, from 17 races with 10 pole positions, 8 podiums and 6 races not finished.",
+    "In the 1997 Italian Grand Prix, Jacques Villeneuve finished 5th starting from position 4, scoring 2.0 points for Williams."
+   ],
+   "seconds": 22.5,
+   "expected": [
+    81
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_16",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "george russell 2026 - how many poles has he got so far this year?",
+   "path": "sql>vector",
+   "answer": "5.",
+   "sql": "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'George Russell' AND grid = 1 AND season = 2026",
+   "sources": [
+    "After round 18 of the 2026 season, George Russell was 2nd in the drivers championship with 242.0 points and 3 wins, driving for Mercedes, from 18 races with 5 pole positions, 8 podiums and 3 races not finished.",
+    "In the 2026 Canadian Grand Prix, George Russell retired, grid position 1, scoring 0.0 points for Mercedes.",
+    "In the 2026 Belgian Grand Prix, George Russell retired, grid position 3, scoring 0.0 points for Mercedes.",
+    "In the 2026 United States Grand Prix, George Russell finished 8th starting from position 6, scoring 4.0 points for Mercedes.",
+    "In the 2026 Hungarian Grand Prix, George Russell finished 7th starting from position 6, scoring 6.0 points for Mercedes."
+   ],
+   "seconds": 10.5,
+   "expected": [
+    5
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_17",
+   "split": "holdout8",
+   "kind": "aggregate",
+   "question": "Which driver scored the most podium finishes for Ligier?",
+   "path": "template",
+   "answer": "Jacques Laffite had the most podiums for Ligier, with 31.",
+   "sql": "SELECT driver_name, COUNT(*) AS n FROM f1_results WHERE constructor IN ('Ligier') AND position <= 3 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [
+    "Laffite"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_18",
+   "split": "holdout8",
+   "kind": "narrative",
+   "question": "My dad always talks about Jacky Ickx. What was his F1 career like?",
+   "path": "vector",
+   "answer": "Jacky Ickx raced in Formula 1 from 1967 to 1979, entering 116 races for Matra, Cooper, Ferrari, Brabham, McLaren, Iso Marlboro, Team Lotus, Wolf, Ensign and Ligier, with 8 wins, 13 pole positions, 25 podiums and 181 points.",
+   "sql": null,
+   "sources": [
+    "Jacky Ickx raced in Formula 1 from 1967 to 1979, entering 116 races for Matra, Cooper, Ferrari, Brabham, McLaren, Iso Marlboro, Team Lotus, Wolf, Ensign and Ligier, with 8 wins, 13 pole positions, 25 podiums and 181 points.",
+    "In the 1968 Mexican Grand Prix, Jacky Ickx retired (Ignition), grid position 15, scoring 0.0 points for Ferrari.",
+    "In the 1968 Spanish Grand Prix, Jacky Ickx retired (Ignition), grid position 8, scoring 0.0 points for Ferrari.",
+    "In the 1971 German Grand Prix, Jacky Ickx retired (Accident), grid position 2, scoring 0.0 points for Ferrari.",
+    "In the 1970 Spanish Grand Prix, Jacky Ickx retired (Accident), grid position 7, scoring 0.0 points for Ferrari."
+   ],
+   "seconds": 0.3,
+   "expected": [
+    8
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_19",
+   "split": "holdout8",
+   "kind": "narrative",
+   "question": "Tell me about Watkins Glen's time as a Formula 1 track.",
+   "path": "vector",
+   "answer": "Watkins Glen in New York State, USA hosted 20 Formula 1 races from 1961 to 1980. The most wins there came from Graham Hill and Jim Clark, with 3 wins each.",
+   "sql": null,
+   "sources": [
+    "Watkins Glen in New York State, USA hosted 20 Formula 1 races from 1961 to 1980. The most wins there came from Graham Hill and Jim Clark, with 3 wins each.",
+    "Adams raced in Formula 1 in 1950, entering 1 race, with 0 wins, 0 pole positions and 0 points.",
+    "Prost raced in Formula 1 from 1997 to 2001, entering 83 races, with 0 wins, 0 pole positions and 35 points.",
+    "Arvid Lindblad raced in Formula 1 in 2026, entering 18 races for RB F1 Team, with 0 wins, 0 pole positions, 0 podiums and 38 points.",
+    "The 1963 United States Grand Prix at Watkins Glen in New York State, USA was won by Graham Hill for BRM, with Graham Hill on pole position, and the podium was Graham Hill, Richie Ginther and Jim Clark."
+   ],
+   "seconds": 0.2,
+   "expected": [
+    20
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_20",
+   "split": "holdout8",
+   "kind": "narrative",
+   "question": "What's the story of the Jordan team in F1?",
+   "path": "vector",
+   "answer": "Jordan raced in Formula 1 from 1991 to 2005, entering 250 races, with 4 wins, 2 pole positions and 291 points. Its most race wins came from Heinz-Harald Frentzen, with 2 wins.",
+   "sql": null,
+   "sources": [
+    "Jordan raced in Formula 1 from 1991 to 2005, entering 250 races, with 4 wins, 2 pole positions and 291 points. Its most race wins came from Heinz-Harald Frentzen, with 2 wins.",
+    "In the 2001 Spanish Grand Prix, Heinz-Harald Frentzen retired (Collision), grid position 8, scoring 0.0 points for Jordan.",
+    "In the 2016 constructors championship, Haas F1 Team finished 8th with 29.0 points and 0 wins.",
+    "In the 2000 Australian Grand Prix, Heinz-Harald Frentzen retired (Hydraulics), grid position 5, scoring 0.0 points for Jordan.",
+    "In the 2017 constructors championship, Haas F1 Team finished 8th with 47.0 points and 0 wins."
+   ],
+   "seconds": 0.3,
+   "expected": [
+    4
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_21",
+   "split": "holdout8",
+   "kind": "narrative",
+   "question": "How did Mika Hakkinen's 1998 season unfold?",
+   "path": "vector",
+   "answer": "At the end of the 1998 season, Mika Häkkinen won the drivers championship with 100.0 points and 8 wins, driving for McLaren, from 16 races with 9 pole positions, 11 podiums and 3 races not finished.",
+   "sql": null,
+   "sources": [
+    "At the end of the 1998 season, Mika Häkkinen won the drivers championship with 100.0 points and 8 wins, driving for McLaren, from 16 races with 9 pole positions, 11 podiums and 3 races not finished.",
+    "In the 1998 Italian Grand Prix, Mika Häkkinen finished 4th starting from position 3, scoring 3.0 points for McLaren.",
+    "In the 1998 Argentine Grand Prix, Mika Häkkinen finished 2nd starting from position 3, scoring 6.0 points for McLaren.",
+    "In the 1998 Canadian Grand Prix, Mika Häkkinen retired (Gearbox), grid position 2, scoring 0.0 points for McLaren.",
+    "In the 1998 French Grand Prix, Mika Häkkinen finished 3rd starting from position 1, scoring 4.0 points for McLaren."
+   ],
+   "seconds": 0.1,
+   "expected": [
+    100
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_22",
+   "split": "holdout8",
+   "kind": "narrative",
+   "question": "Interlagos 2003 was a bizarre, rain-soaked race - what happened and who ended up winning it?",
+   "path": "sql>vector",
+   "answer": "Giancarlo Fisichella won the 2003 Brazilian Grand Prix at Interlagos.",
+   "sql": "SELECT season, round, race_name, driver_id, driver_name, constructor, grid, position, points",
+   "sources": [
+    "The 2003 Brazilian Grand Prix at Autódromo José Carlos Pace in São Paulo, Brazil was won by Giancarlo Fisichella for Jordan, with Rubens Barrichello on pole position, and the podium was Giancarlo Fisichella, Kimi Räikkönen and Fernando Alonso.",
+    "Wetteroth raced in Formula 1 in 1950, entering 1 race, with 0 wins, 0 pole positions and 0 points.",
+    "In the 1982 Canadian Grand Prix, Riccardo Paletti suffered a fatal accident while driving for Osella.",
+    "Trojan raced in Formula 1 in 1974, entering 6 races, with 0 wins, 0 pole positions and 0 points.",
+    "In the 1970 Italian Grand Prix, Jochen Rindt suffered a fatal accident while driving for Team Lotus."
+   ],
+   "seconds": 19.1,
+   "expected": [
+    "Fisichella"
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_23",
+   "split": "holdout8",
+   "kind": "narrative",
+   "question": "Nico Rosberg and Jenson Button were both one-time champions. How do their careers compare?",
+   "path": "vector",
+   "answer": "Nico Rosberg raced in Formula 1 from 2006 to 2016, entering 206 races for Williams and Mercedes, with 23 wins, 30 pole positions, 57 podiums and 1594.5 points. Nico Rosberg won 1 drivers championship (2016). Jenson Button raced in Formula 1 from 2000 to 2017, entering 309 races for Williams, Benetton, Renault, BAR, Honda, Brawn and McLaren, with 15 wins, 8 pole positions, 50 podiums and 1235 points. Jenson Button won 1 drivers championship (2009).",
+   "sql": null,
+   "sources": [
+    "Nico Rosberg raced in Formula 1 from 2006 to 2016, entering 206 races for Williams and Mercedes, with 23 wins, 30 pole positions, 57 podiums and 1594.5 points. Nico Rosberg won 1 drivers championship (2016).",
+    "Jenson Button raced in Formula 1 from 2000 to 2017, entering 309 races for Williams, Benetton, Renault, BAR, Honda, Brawn and McLaren, with 15 wins, 8 pole positions, 50 podiums and 1235 points. Jenson Button won 1 drivers championship (2009).",
+    "The 2012 Chinese Grand Prix at Shanghai International Circuit in Shanghai, China was won by Nico Rosberg for Mercedes, with Nico Rosberg on pole position, and the podium was Nico Rosberg, Jenson Button and Lewis Hamilton.",
+    "At the end of the 2001 season, Jenson Button was 17th in the drivers championship with 2.0 points and 0 wins, driving for Benetton, from 17 races with 0 pole positions, 0 podiums and 7 races not finished.",
+    "The 2010 Chinese Grand Prix at Shanghai International Circuit in Shanghai, China was won by Jenson Button for McLaren, with Sebastian Vettel on pole position, and the podium was Jenson Button, Lewis Hamilton and Nico Rosberg."
+   ],
+   "seconds": 0.4,
+   "expected": [
+    23
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_24",
+   "split": "holdout8",
+   "kind": "narrative",
+   "question": "How has Red Bull's 2026 season been going so far?",
+   "path": "vector",
+   "answer": "After round 18 of the 2026 constructors championship, Red Bull was 3rd with 355.0 points and 2 wins. After round 18 of the 2026 season, Max Verstappen was 4th in the drivers championship with 236.0 points and 2 wins, driving for Red Bull, from 18 races with 2 pole positions, 10 podiums and 4 races not finished. After round 18 of the 2026 season, Isack Hadjar was 8th in the drivers championship with 105.0 points and 0 wins, driving for Red Bull, from 15 races with 0 pole positions, 2 podiums and 2 races not finished.",
+   "sql": null,
+   "sources": [
+    "After round 18 of the 2026 constructors championship, Red Bull was 3rd with 355.0 points and 2 wins.",
+    "After round 18 of the 2026 season, Max Verstappen was 4th in the drivers championship with 236.0 points and 2 wins, driving for Red Bull, from 18 races with 2 pole positions, 10 podiums and 4 races not finished.",
+    "After round 18 of the 2026 season, Isack Hadjar was 8th in the drivers championship with 105.0 points and 0 wins, driving for Red Bull, from 15 races with 0 pole positions, 2 podiums and 2 races not finished.",
+    "In the 2026 Miami Grand Prix, Isack Hadjar retired, grid position 22, scoring 0.0 points for Red Bull.",
+    "In the 2026 British Grand Prix, Max Verstappen retired, grid position 7, scoring 0.0 points for Red Bull."
+   ],
+   "seconds": 0.3,
+   "expected": [
+    355
+   ],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_25",
+   "split": "holdout8",
+   "kind": "unanswerable",
+   "question": "How much does Singapore pay Formula 1 each year to host its night race?",
+   "path": "refuse",
+   "answer": "That isn't in the data.",
+   "sql": null,
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_26",
+   "split": "holdout8",
+   "kind": "unanswerable",
+   "question": "quick one - who is Nico Rosberg married to?",
+   "path": "refuse",
+   "answer": "That isn't in the data.",
+   "sql": null,
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_27",
+   "split": "holdout8",
+   "kind": "unanswerable",
+   "question": "How many litres of fuel was Ayrton Senna's car carrying at the start of the 1993 European Grand Prix at Donington?",
+   "path": "refuse",
+   "answer": "That isn't in the data.",
+   "sql": null,
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_28",
+   "split": "holdout8",
+   "kind": "unanswerable",
+   "question": "Which driver was shown the most black-and-white warning flags for track limits during the 2019 season?",
+   "path": "refuse",
+   "answer": "That isn't in the data.",
+   "sql": null,
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_29",
+   "split": "holdout8",
+   "kind": "unanswerable",
+   "question": "How high above sea level is the circuit in Mexico City?",
+   "path": "refuse",
+   "answer": "That isn't in the data.",
+   "sql": null,
+   "sources": [],
+   "seconds": 0.0,
+   "expected": [],
+   "outcome": "right"
+  },
+  {
+   "id": "holdout8_30",
+   "split": "holdout8",
+   "kind": "unanswerable",
+   "question": "What was the chassis designation of the six-wheeled Tyrrell that won the 1976 Swedish Grand Prix?",
+   "path": "refuse",
+   "answer": "That isn't in the data.",
+   "sql": null,
+   "sources": [],
+   "seconds": 0.0,
    "expected": [],
    "outcome": "right"
   },
@@ -5344,7 +5848,7 @@
    "question": "Which team started from pole most often during the 2010s?",
    "path": "template",
    "answer": "Mercedes had the most pole positions in the 2010s, with 103.",
-   "sql": "SELECT CASE WHEN constructor IN ('Cooper', 'Cooper-Alfa Romeo', 'Cooper-ATS', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Maserati', 'Cooper-Castellotti', 'Cooper-OSCA', 'Cooper-BRM') THEN 'Cooper' WHEN constructor IN ('De Tomaso', 'De Tomaso-Osca', 'De Tomaso-Alfa Romeo') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('McLaren-BRM', 'McLaren', 'McLaren-Serenissima', 'McLaren-Ford', 'McLaren-Alfa Romeo') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS', 'LDS-Alfa Romeo') THEN 'LDS' WHEN constructor IN ('Shadow', 'Shadow-Matra', 'Shadow-Ford') THEN 'Shadow' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Ford', 'Lotus-Maserati', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Pratt & Whitney') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('BRM-Ford', 'BRM') THEN 'BRM' WHEN constructor IN ('Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo', 'Brabham', 'Brabham-Ford') THEN 'Brabham' WHEN constructor IN ('Eagle-Climax', 'Eagle-Weslake') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 2010 AND 2019 AND grid = 1 GROUP BY 1 ORDER BY n DESC LIMIT 2",
+   "sql": "SELECT CASE WHEN constructor IN ('BRM', 'BRM-Ford') THEN 'BRM' WHEN constructor IN ('Brabham', 'Brabham-Ford', 'Brabham-BRM', 'Brabham-Repco', 'Brabham-Climax', 'Brabham-Alfa Romeo') THEN 'Brabham' WHEN constructor IN ('De Tomaso', 'De Tomaso-Alfa Romeo', 'De Tomaso-Osca') THEN 'De Tomaso' WHEN constructor IN ('March', 'March-Ford', 'March-Alfa Romeo') THEN 'March' WHEN constructor IN ('Cooper-OSCA', 'Cooper-BRM', 'Cooper-Alfa Romeo', 'Cooper', 'Cooper-Maserati', 'Cooper-Climax', 'Cooper-Borgward', 'Cooper-Ferrari', 'Cooper-Castellotti', 'Cooper-ATS') THEN 'Cooper' WHEN constructor IN ('Lotus-Borgward', 'Lotus-Pratt & Whitney', 'Team Lotus', 'Lotus-Climax', 'Lotus-BRM', 'Lotus-Ford', 'Lotus-Maserati') THEN 'Team Lotus' WHEN constructor IN ('Matra-Ford', 'Matra') THEN 'Matra' WHEN constructor IN ('McLaren-BRM', 'McLaren-Ford', 'McLaren-Alfa Romeo', 'McLaren', 'McLaren-Serenissima') THEN 'McLaren' WHEN constructor IN ('LDS-Climax', 'LDS-Alfa Romeo', 'LDS') THEN 'LDS' WHEN constructor IN ('Shadow-Matra', 'Shadow-Ford', 'Shadow') THEN 'Shadow' WHEN constructor IN ('Eagle-Weslake', 'Eagle-Climax') THEN 'Eagle' ELSE constructor END, COUNT(DISTINCT season * 100 + round) AS n FROM f1_results WHERE season BETWEEN 2010 AND 2019 AND grid = 1 GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10",
    "sources": [],
    "seconds": 0.0
   },
@@ -5380,7 +5884,7 @@
     "The 1990 Brazilian Grand Prix at Autódromo José Carlos Pace in São Paulo, Brazil was won by Alain Prost for Ferrari, with Ayrton Senna on pole position, and the podium was Alain Prost, Gerhard Berger and Ayrton Senna.",
     "The 1990 Belgian Grand Prix at Circuit de Spa-Francorchamps in Spa, Belgium was won by Ayrton Senna for McLaren, with Ayrton Senna on pole position, and the podium was Ayrton Senna, Alain Prost and Gerhard Berger."
    ],
-   "seconds": 0.3
+   "seconds": 0.2
   },
   {
    "id": "example_05",
@@ -5408,7 +5912,7 @@
     "After round 18 of the 2026 season, Fernando Alonso was 17th in the drivers championship with 7.0 points and 0 wins, driving for Aston Martin, from 18 races with 0 pole positions, 0 podiums and 6 races not finished.",
     "After round 18 of the 2026 season, Lance Stroll was 21st in the drivers championship with 0.0 points and 0 wins, driving for Aston Martin, from 18 races with 0 pole positions, 0 podiums and 11 races not finished."
    ],
-   "seconds": 13.4
+   "seconds": 15.8
   },
   {
    "id": "example_07",
