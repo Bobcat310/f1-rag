@@ -417,8 +417,9 @@ footer p { margin: 0 0 8px; }
       detail.append(el("div", {}, el("h4", { text: "Sentences behind the answer" }),
         el("ol", {}, ...a.sources.map((s) => el("li", { text: s })))));
     }
-    detail.append(el("p", { class: "meta", text: `${D.sets[a.split] || a.split} · ${a.kind} · answered in ${a.seconds}s` }));
-    return el("details", { class: "q" },
+    detail.append(el("p", { class: "meta" }, `${D.sets[a.split] || a.split} · ${a.kind} · answered in ${a.seconds}s · `,
+      el("a", { href: "#" + a.id, text: "Link to this answer" })));
+    return el("details", { class: "q", id: a.id },
       el("summary", {}, verdict, el("span", { class: "qtext", text: a.question }), el("span", { class: "badge", text: PATH_LABEL[a.path] || a.path })),
       detail);
   }
@@ -434,7 +435,23 @@ footer p { margin: 0 0 8px; }
     $(id).addEventListener("input", () => { shown = PAGE; drawList(); });
   }
   $("more").addEventListener("click", () => { shown += PAGE; drawList(); });
+
+  // A link like #holdout7_21 opens that answer: clear the filters to its set and page down to it
+  function openLinked() {
+    const id = decodeURIComponent(location.hash.slice(1));
+    const a = D.answers.find((x) => x.id === id);
+    if (!a) return;
+    $("search").value = ""; $("f-path").value = ""; $("f-outcome").value = ""; $("f-set").value = a.split;
+    const rank = D.answers.filter(matches).findIndex((x) => x.id === id);
+    shown = Math.max(PAGE, Math.ceil((rank + 1) / PAGE) * PAGE);
+    drawList();
+    const node = document.getElementById(id);
+    node.open = true;
+    node.scrollIntoView({ block: "start" });
+  }
+  addEventListener("hashchange", openLinked);
   drawList();
+  openLinked();
 })();
 </script>
 </body>
