@@ -7,3 +7,4 @@ __pycache__/
 data/f1.db*
 .ipynb_checkpoints/
 deploy/build/
+showcase/answers.jsonl

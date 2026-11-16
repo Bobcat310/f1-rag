@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F1 RAG</title>
+<meta name="description" content="A Formula 1 question-answering system that runs on a laptop CPU: every recorded answer with its route, SQL and sources, and how it scored on frozen question sets.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f6f5f2;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e2e0da;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #74726c;
+  --accent: #c8102e;
+  --accent-ink: #a50d26;
+  --code-bg: #f3f2ee;
+  --right: #0ca30c;
+  --wrong: #d03b3b;
+  --refused: #fab219;
+  --focus: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --border: #33332f;
+    --text: #f0efec;
+    --text-2: #c3c2b7;
+    --text-3: #9a988f;
+    --accent: #ef4a5f;
+    --accent-ink: #f47586;
+    --code-bg: #20201e;
+    --focus: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --border: #33332f;
+  --text: #f0efec;
+  --text-2: #c3c2b7;
+  --text-3: #9a988f;
+  --accent: #ef4a5f;
+  --accent-ink: #f47586;
+  --code-bg: #20201e;
+  --focus: #3987e5;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--accent-ink); }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+header.top { border-top: 4px solid var(--accent); background: var(--surface); border-bottom: 1px solid var(--border); }
+header.top .wrap { padding-top: 40px; padding-bottom: 36px; }
+.eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin: 0 0 8px; }
+h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.1; margin: 0 0 14px; letter-spacing: -.02em; }
+.lede { font-size: 18px; color: var(--text-2); max-width: 680px; margin: 0 0 20px; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none; font-size: 15px;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.theme-toggle { margin-left: auto; cursor: pointer; font: inherit; font-size: 14px; }
+
+section { padding: 44px 0 8px; }
+h2 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.01em; }
+.sub { color: var(--text-2); margin: 0 0 20px; max-width: 720px; }
+
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+.tile { background: var(--surface-2); border-radius: 10px; padding: 14px 16px; }
+.tile .num { font-size: 34px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .lbl { color: var(--text-2); font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.tile-note { color: var(--text-3); font-size: 14px; margin: 10px 0 0; }
+
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.right { background: var(--right); } .dot.wrong { background: var(--wrong); } .dot.refused { background: var(--refused); }
+
+.paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.path-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.path-card h3 { font-size: 16px; margin: 0; }
+.path-card .share { color: var(--text-3); font-size: 13px; margin: 0 0 6px; font-variant-numeric: tabular-nums; }
+.path-card p { margin: 0; color: var(--text-2); font-size: 14px; }
+.step { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+
+.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.chart-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button {
+  font: inherit; font-size: 14px; padding: 6px 12px; border: 0; background: var(--surface); color: var(--text-2); cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rows { display: grid; gap: 10px; }
+.row { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; }
+.row-label { font-size: 14px; }
+.row-label b { font-weight: 600; display: block; }
+.row-label small { color: var(--text-3); font-size: 12px; }
+.bar { display: flex; gap: 2px; height: 28px; }
+.bar div {
+  height: 100%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; cursor: default;
+}
+.bar div:first-child { border-radius: 4px 0 0 4px; }
+.bar div:last-child { border-radius: 0 4px 4px 0; }
+.bar div:only-child { border-radius: 4px; }
+.bar .right { background: var(--right); color: #fff; }
+.bar .wrong { background: var(--wrong); color: #fff; }
+.bar .refused { background: var(--refused); color: #1c1600; }
+.divider { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; border-top: 1px dashed var(--border); padding-top: 8px; }
+.chart-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 14px; color: var(--text-3); font-size: 13px; }
+.link-btn { font: inherit; font-size: 13px; background: none; border: 0; color: var(--accent-ink); cursor: pointer; padding: 0; text-decoration: underline; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 12px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+th { color: var(--text-2); font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+.tooltip {
+  position: fixed; pointer-events: none; background: var(--text); color: var(--surface); padding: 6px 10px; border-radius: 6px;
+  font-size: 13px; opacity: 0; transition: opacity .1s; z-index: 10; max-width: 240px;
+}
+
+.note { background: var(--surface-2); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 4px; font-size: 14px; color: var(--text-2); margin: 0 0 16px; }
+.filters { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.filters input, .filters select {
+  font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); width: 100%; min-width: 0;
+}
+.count { color: var(--text-3); font-size: 14px; margin: 0 0 10px; }
+.list { display: grid; gap: 8px; }
+details.q { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+details.q summary {
+  list-style: none; cursor: pointer; padding: 12px 14px; display: grid; grid-template-columns: 92px 1fr auto; gap: 10px; align-items: baseline;
+}
+details.q summary::-webkit-details-marker { display: none; }
+details.q[open] summary { border-bottom: 1px solid var(--border); }
+.verdict { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.qtext { font-weight: 550; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+.detail { padding: 12px 14px 16px; display: grid; gap: 12px; }
+.detail h4 { margin: 0 0 4px; font-size: 13px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+.detail p { margin: 0; }
+pre { margin: 0; background: var(--code-bg); padding: 10px 12px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.detail ol { margin: 0; padding-left: 20px; font-size: 14px; color: var(--text-2); }
+.detail ol li + li { margin-top: 4px; }
+.meta { font-size: 13px; color: var(--text-3); }
+.more { margin: 14px auto 0; display: block; }
+footer { margin-top: 48px; padding: 24px 0 40px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 14px; }
+footer p { margin: 0 0 8px; }
+
+@media (max-width: 640px) {
+  .row { grid-template-columns: 1fr; gap: 4px; }
+  .filters { grid-template-columns: 1fr 1fr; }
+  .filters input { grid-column: 1 / -1; }
+  details.q summary { grid-template-columns: 1fr; gap: 4px; }
+  .theme-toggle { margin-left: 0; }
+}
+@media (forced-colors: active) {
+  .bar div { border: 1px solid CanvasText; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <p class="eyebrow">Personal project</p>
+    <h1>F1 RAG</h1>
+    <p class="lede">Ask about 76 years of Formula 1 and get an answer you can check. A keyword router sends each question to
+      SQL filled in by Python, SQL written by a small local model, or search over sentences built from the results tables,
+      and it refuses what the data doesn't hold. It runs on a laptop CPU with no paid APIs.</p>
+    <div class="links">
+      <a class="btn primary" href="https://github.com/Bobcat310/f1-rag">Code and method on GitHub</a>
+      <button class="btn theme-toggle" id="theme" type="button">Dark theme</button>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <p class="tile-note" id="tile-note"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section aria-labelledby="how">
+    <h2 id="how">How a question is answered</h2>
+    <p class="sub">The router tries each route in order. Counts are from the recorded answers below.</p>
+    <div class="paths" id="paths"></div>
+  </section>
+
+  <section aria-labelledby="results">
+    <h2 id="results">Results on frozen question sets</h2>
+    <p class="sub">For each set, 30 questions were committed after the code and before any run, then scored once. I wrote
+      sets 1 to 4. Sets 5 to 7 were written by a separate agent that saw the data but never the code, and their looser
+      wording is the honest test.</p>
+    <div class="chart-card">
+      <div class="chart-head">
+        <div class="seg" role="group" aria-label="Pipeline" id="pipeline">
+          <button type="button" data-p="hybrid" aria-pressed="true">Hybrid</button>
+          <button type="button" data-p="vector" aria-pressed="false">Retrieval only</button>
+          <button type="button" data-p="sql" aria-pressed="false">SQL only</button>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="dot right"></i>Right</span><span><i class="dot wrong"></i>Wrong</span><span><i class="dot refused"></i>Refused</span>
+        </div>
+      </div>
+      <div class="rows" id="chart" role="img"></div>
+      <div class="chart-foot">
+        <span>A refusal counts as right when the data doesn't hold the answer.</span>
+        <button class="link-btn" type="button" id="table-toggle" aria-expanded="false">Show as table</button>
+      </div>
+      <div class="table-wrap" id="table" hidden></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="explore">
+    <h2 id="explore">Every recorded answer</h2>
+    <p class="sub">Each question run through the current code, with its route, the SQL it ran and the sentences behind it.</p>
+    <p class="note" id="fair-note"></p>
+    <div class="filters">
+      <input type="search" id="search" placeholder="Search questions or answers" aria-label="Search questions or answers">
+      <select id="f-set" aria-label="Question set"></select>
+      <select id="f-path" aria-label="Route"></select>
+      <select id="f-outcome" aria-label="Outcome"></select>
+    </div>
+    <p class="count" id="count" aria-live="polite"></p>
+    <div class="list" id="list"></div>
+    <button class="btn more" type="button" id="more" hidden>Show more</button>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p id="recorded"></p>
+    <p>Data: the Kaggle dataset "Formula 1 Complete History (1950–2026)", licensed
+      <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>, loaded into DuckDB, cleaned and turned into
+      sentences, with the 2026 season, sprints and pit stops from the <a href="https://api.jolpi.ca/ergast/f1/">Jolpica API</a>.
+      Not affiliated with Formula 1.</p>
+  </div>
+</footer>
+
+<div class="tooltip" id="tip" role="tooltip"></div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  const D = window.SHOWCASE;
+  const $ = (id) => document.getElementById(id);
+  const OUTCOMES = { right: "Right", wrong: "Wrong", refused: "Refused" };
+  const ICONS = { right: "✓", wrong: "✕", refused: "⊘" };
+  const PATHS = [
+    ["refuse", "Refused", "1", "The question asks for something no table records, such as weather, tyres or salaries."],
+    ["template", "Template", "2", "Python recognises the question's shape and fills in the SQL. No model involved."],
+    ["sql", "Text-to-SQL", "3a", "The model writes SQL, checked for names and numbers the question never mentioned."],
+    ["sql>vector", "Retrieval over SQL", "3b","The model wrote SQL, but an answer backed by the sentences won, since its numbers must appear in them."],
+    ["vector", "Retrieval", "4", "Keyword and semantic search find sentences, and the model answers only from them."],
+  ];
+  const PATH_LABEL = Object.fromEntries(PATHS.map((p) => [p[0], p[1]]));
+
+  function el(tag, attrs, ...kids) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === "class") node.className = v; else if (k === "text") node.textContent = v; else node.setAttribute(k, v);
+    }
+    for (const kid of kids) if (kid != null) node.append(kid);
+    return node;
+  }
+
+  // Theme toggle: remembered per viewer when storage allows it
+  const root = document.documentElement;
+  function isDark() {
+    const set = root.getAttribute("data-theme");
+    return set ? set === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function paintToggle() { $("theme").textContent = isDark() ? "Light theme" : "Dark theme"; }
+  try { const saved = localStorage.getItem("theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+  paintToggle();
+  $("theme").addEventListener("click", () => {
+    const next = isDark() ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("theme", next); } catch (e) {}
+    paintToggle();
+  });
+
+  // Headline: the latest blind set
+  const latest = D.holdouts[D.holdouts.length - 1];
+  for (const k of ["right", "wrong", "refused"]) {
+    $("tiles").append(el("div", { class: "tile" },
+      el("div", { class: "num", text: String(latest.hybrid[k]) }),
+      el("div", { class: "lbl" }, el("i", { class: "dot " + k }), OUTCOMES[k])));
+  }
+  $("tile-note").textContent = `${latest.label}: ${latest.total} questions written blind to the code, scored once. ` +
+    `Retrieval alone got ${latest.vector.right} right and ${latest.vector.wrong} wrong.`;
+
+  // Routes
+  const totalPaths = Object.values(D.paths).reduce((a, b) => a + b, 0);
+  for (const [key, label, step, text] of PATHS) {
+    const n = D.paths[key] || 0;
+    $("paths").append(el("div", { class: "path-card" },
+      el("div", { class: "step", text: "Step " + step }),
+      el("h3", { text: label }),
+      el("p", { class: "share", text: `${n} of ${totalPaths} answers` }),
+      el("p", { text })));
+  }
+
+  // Chart
+  const tip = $("tip");
+  function showTip(e, text) {
+    tip.textContent = text; tip.style.opacity = 1;
+    const x = Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8);
+    tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px";
+  }
+  function hideTip() { tip.style.opacity = 0; }
+  let pipeline = "hybrid";
+  function drawChart() {
+    const chart = $("chart");
+    chart.replaceChildren();
+    const names = { hybrid: "Hybrid", vector: "Retrieval only", sql: "SQL only" };
+    chart.setAttribute("aria-label", `${names[pipeline]} results per question set. Use the table view for exact numbers.`);
+    D.holdouts.forEach((h, i) => {
+      if (i > 0 && h.author !== D.holdouts[i - 1].author) chart.append(el("div", { class: "divider", text: "Blind sets begin" }));
+      const counts = h[pipeline];
+      const bar = el("div", { class: "bar" });
+      for (const k of ["right", "wrong", "refused"]) {
+        if (!counts[k]) continue;
+        const seg = el("div", { class: k, text: counts[k] >= 2 ? String(counts[k]) : "" });
+        seg.style.flex = `${counts[k]} 1 0`;
+        const label = `${h.label} · ${OUTCOMES[k]}: ${counts[k]} of ${h.total}`;
+        seg.addEventListener("mousemove", (e) => showTip(e, label));
+        seg.addEventListener("mouseleave", hideTip);
+        bar.append(seg);
+      }
+      chart.append(el("div", { class: "row" },
+        el("div", { class: "row-label" }, el("b", { text: h.label }),
+          el("small", { text: h.author === "blind" ? "written blind" : "written by me" })),
+        bar));
+    });
+    drawTable();
+  }
+  function drawTable() {
+    const head = el("tr", {}, ...["Set", "Written by", "Pipeline", "Right", "Wrong", "Refused"].map((t) => el("th", { text: t })));
+    const body = [];
+    for (const h of D.holdouts) {
+      for (const [p, name] of [["hybrid", "Hybrid"], ["vector", "Retrieval only"], ["sql", "SQL only"]]) {
+        body.push(el("tr", {}, el("td", { text: h.label }), el("td", { text: h.author === "blind" ? "Blind agent" : "Me" }),
+          el("td", { text: name }), ...["right", "wrong", "refused"].map((k) => el("td", { text: String(h[p][k]) }))));
+      }
+    }
+    $("table").replaceChildren(el("table", {}, el("thead", {}, head), el("tbody", {}, ...body)));
+  }
+  $("pipeline").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    pipeline = b.dataset.p;
+    for (const x of $("pipeline").querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+    drawChart();
+  });
+  $("table-toggle").addEventListener("click", () => {
+    const open = $("table").hidden;
+    $("table").hidden = !open;
+    $("table-toggle").setAttribute("aria-expanded", String(open));
+    $("table-toggle").textContent = open ? "Hide table" : "Show as table";
+  });
+  drawChart();
+
+  // Explorer
+  $("fair-note").textContent = `Recorded on ${D.recorded} with the code at ${D.commit}. Questions from earlier sets shaped later ` +
+    "fixes, so these answers flatter the system. The frozen scores above are the fair measure.";
+  $("recorded").textContent = `Answers recorded ${D.recorded} from commit ${D.commit}, using llama3.2:3b through Ollama on a laptop CPU.`;
+
+  const setOrder = Object.keys(D.sets);
+  const usedSets = setOrder.filter((s) => D.answers.some((a) => a.split === s));
+  function fill(select, all, options) {
+    select.append(el("option", { value: "", text: all }));
+    for (const [v, t] of options) select.append(el("option", { value: v, text: t }));
+  }
+  fill($("f-set"), "All sets", usedSets.slice().reverse().map((s) => [s, D.sets[s]]));
+  fill($("f-path"), "All routes", PATHS.filter((p) => D.paths[p[0]]).map((p) => [p[0], p[1]]));
+  fill($("f-outcome"), "All outcomes", [["right", "Right"], ["wrong", "Wrong"], ["refused", "Refused"], ["none", "Not scored"]]);
+
+  const PAGE = 30;
+  let shown = PAGE;
+  function matches(a) {
+    const q = $("search").value.trim().toLowerCase();
+    const set = $("f-set").value, path = $("f-path").value, out = $("f-outcome").value;
+    if (set && a.split !== set) return false;
+    if (path && a.path !== path) return false;
+    if (out && (out === "none" ? a.outcome : a.outcome !== out)) return false;
+    return !q || a.question.toLowerCase().includes(q) || a.answer.toLowerCase().includes(q);
+  }
+  function expectedText(a) {
+    if (!a.expected) return null;
+    if (!a.expected.length) return "A refusal: the data doesn't hold this.";
+    return a.expected.map(String).join(" or ");
+  }
+  function card(a) {
+    const verdict = a.outcome
+      ? el("span", { class: "verdict" }, el("i", { class: "dot " + a.outcome }), `${ICONS[a.outcome]} ${OUTCOMES[a.outcome]}`)
+      : el("span", { class: "verdict", text: "Example" });
+    const detail = el("div", { class: "detail" },
+      el("div", {}, el("h4", { text: "Answer" }), el("p", { text: a.answer })));
+    const exp = expectedText(a);
+    if (exp) detail.append(el("div", {}, el("h4", { text: "Scored against" }), el("p", { text: exp })));
+    if (a.sql) detail.append(el("div", {}, el("h4", { text: a.path === "sql>vector" ? "SQL the model wrote (not used)" : a.path === "template" ? "SQL filled in by Python" : "SQL" }), el("pre", { text: a.sql })));
+    if (a.sources && a.sources.length) {
+      detail.append(el("div", {}, el("h4", { text: "Sentences behind the answer" }),
+        el("ol", {}, ...a.sources.map((s) => el("li", { text: s })))));
+    }
+    detail.append(el("p", { class: "meta", text: `${D.sets[a.split] || a.split} · ${a.kind} · answered in ${a.seconds}s` }));
+    return el("details", { class: "q" },
+      el("summary", {}, verdict, el("span", { class: "qtext", text: a.question }), el("span", { class: "badge", text: PATH_LABEL[a.path] || a.path })),
+      detail);
+  }
+  function drawList() {
+    // newest sets first, so the blind questions lead
+    const rank = Object.fromEntries(setOrder.map((s, i) => [s, i]));
+    const hits = D.answers.filter(matches).sort((a, b) => (rank[b.split] ?? 0) - (rank[a.split] ?? 0));
+    $("count").textContent = `Showing ${Math.min(shown, hits.length)} of ${hits.length} answers`;
+    $("list").replaceChildren(...hits.slice(0, shown).map(card));
+    $("more").hidden = hits.length <= shown;
+  }
+  for (const id of ["search", "f-set", "f-path", "f-outcome"]) {
+    $(id).addEventListener("input", () => { shown = PAGE; drawList(); });
+  }
+  $("more").addEventListener("click", () => { shown += PAGE; drawList(); });
+  drawList();
+})();
+</script>
+</body>
+</html>
