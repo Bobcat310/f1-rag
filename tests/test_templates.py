@@ -111,7 +111,7 @@ declined("Who finished second most often in 2021?")
 declined("Who won the British Grand Prix?")             # no season
 declined("Who won the 2026 drivers championship?")      # season still running
 declined("Who won the 2020 race at Silverstone?")       # two races there that year
-declined("Which driver won the most races for Ferrari?")
+name("Which driver won the most races for Ferrari?", "Michael Schumacher had the most wins for Ferrari, with 72")
 name("Which driver scored the most points in 2021?", one("""SELECT d.given_name || ' ' || d.family_name FROM f1_driver_standings s
     JOIN f1_drivers d USING (driver_id) WHERE s.season = 2021 ORDER BY s.points DESC LIMIT 1"""))
 name("Which team scored the most points in 1967?", "Brabham")  # its two entries are added together
@@ -289,6 +289,16 @@ name("How long was the fastest pit stop at the 2022 Spanish Grand Prix?", "21.62
 name("What was the quickest pit stop time anyone recorded during the 2023 season?", "16.25 seconds")
 name("How long was the fastest pit stop at the 2005 Monaco Grand Prix?", "pit stops start in 2011")
 assert template_answer("How long was the average pit stop at the 2022 Spanish Grand Prix?")["answer"].startswith("The average")
+
+# rankings at a place or for a team, by race entries and by championships; a tie names everyone tied
+name("Which driver scored the most podium finishes for Ligier?", "Jacques Laffite had the most podiums for Ligier, with 31")
+name("Which driver won the most races at Silverstone?", "Lewis Hamilton")
+name("Which driver has the most podiums at Monaco?", "Ayrton Senna and Lewis Hamilton")
+name("Which driver has started the most races?", "Fernando Alonso entered the most races")
+name("Which team has the most constructors championships?", "Ferrari won the most constructors championships, with 16")
+name("Who has won the most drivers championships?", "Lewis Hamilton and Michael Schumacher")
+name("Which team started from pole most often during the 2010s?", "Mercedes")  # "started" is still about poles
+number("How many races has Fernando Alonso entered?", "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Fernando Alonso'")
 
 # refusals read only the clauses that ask something
 from src.text_to_sql import asked_part, invented_names, refuses  # noqa: E402

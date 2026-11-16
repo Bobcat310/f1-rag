@@ -52,7 +52,7 @@ COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all t
     pole poles position positions podium podiums finish finishes finished not fail failed retire retired
     retirement retirements dnf dnfs points score scored take took get got claim claimed achieve achieved
     earn earned start started secure secured during altogether rack racked up stood stand collect collected
-    years spell stint""".split())
+    years spell stint entered entries appearances raced""".split())
 MOST_FILLER = COUNT_FILLER | set("who which driver team constructor most often frequently".split())
 EVENT_FILLER = SHARED_FILLER | set("""how many what number total different sprint sprints round rounds circuit circuits track tracks
     venue venues there been held run staged hosted season calendar championship world grands""".split())
@@ -221,10 +221,10 @@ def period_filter(text: str) -> tuple:
 
 
 def count_answer(text: str) -> dict:
-    matched = [m for m in METRICS if re.search(m[0], text)]
-    if len(matched) != 1:
-        return None  # wins from pole is two conditions, and a template only applies one
-    _, condition, one, many = matched[0]
+    metric = pick_metric(text)
+    if metric is None:
+        return None
+    _, condition, one, many = metric
 
     period, when, rest = period_filter(text)
     driver, rest = find_name(rest, DRIVERS)
@@ -259,7 +259,7 @@ def count_answer(text: str) -> dict:
     elif condition is None:
         sql = (None if race or circuit else standings_points_sql(driver, team, period)) or (f"""SELECT (SELECT COALESCE(SUM(points), 0) FROM f1_results WHERE {where})
                                                                     + (SELECT COALESCE(SUM(points), 0) FROM f1_sprint_results WHERE {where})""")
-    elif team and not driver and condition in ("position = 1", "grid = 1"):
+    elif team and not driver and condition in ("position = 1", "grid = 1", "TRUE"):
         # a shared drive puts two of a team's cars on one result
         sql = f"SELECT COUNT(DISTINCT season * 100 + round) FROM {table} WHERE {where} AND {condition}"
     else:
@@ -291,31 +291,99 @@ def most_points_sql(by_team: bool, period) -> str:
                UNION ALL SELECT {column}, points FROM f1_sprint_results {where}) GROUP BY 1 ORDER BY n DESC LIMIT 2"""
 
 
-def most_answer(text: str) -> dict:
+# Entering a race is a measure only when nothing else is: "started from pole" is about poles
+STARTS = (r"\b(starts|started|entered|entries|appearances|raced)\b|\bmost (grands prix|grand prix|races)\b", "TRUE",
+          "race entered", "races entered")
+TITLES = re.compile(r"\bmost (world |drivers |constructors )*(championships|titles)\b")
+TITLE_RANK_FILLER = MOST_FILLER | set("championships titles world drivers constructors".split())
+
+
+def pick_metric(text: str):
     matched = [m for m in METRICS if re.search(m[0], text)]
-    if len(matched) != 1 or re.search(r"\bsprints?\b", text):
-        return None  # this only ranks grand prix results
-    _, condition, _, many = matched[0]
+    if len(matched) == 1:
+        return matched[0]
+    if not matched and re.search(STARTS[0], text):
+        return STARTS
+    return None  # wins from pole is two conditions, and a template applies one
+
+
+def place_filters(race, circuit) -> list:
+    if race:
+        return [f"race_name = {quoted(race)}"]
+    if circuit:
+        return [f"""season * 100 + round IN (SELECT r.season * 100 + r.round FROM f1_races r
+                    JOIN f1_circuits c USING (circuit_id) WHERE c.circuit_name = {quoted(circuit)})"""]
+    return []
+
+
+def leaders(rows: list):
+    """Everyone sharing the top value, so a tie names both rather than picking one. More than three is a list, not an answer."""
+    if not rows:
+        return None
+    top = [name for name, n in rows if n == rows[0][1]]
+    return join_names(top) if len(top) <= 3 else None
+
+
+def titles_answer(text: str, by_team: bool) -> dict:
+    """Most championships: first places in the final standings, so a season still running doesn't count."""
     period, when, rest = period_filter(text)
+    if set(rest.split()) - TITLE_RANK_FILLER:
+        return None
+    unfinished = [s for (s,) in con.execute("SELECT DISTINCT season FROM f1_results").fetchall() if season_running(s)]
+    filters = ["s.position = 1"] + ([f"s.{period}"] if period else []) + [f"s.season <> {s}" for s in unfinished]
+    if by_team:
+        sql = f"""SELECT {TEAM_COLUMN.replace('constructor', 's.constructor')}, COUNT(*) AS n FROM f1_constructor_standings s
+                  WHERE {' AND '.join(filters)} GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10"""
+    else:
+        sql = f"""SELECT d.given_name || ' ' || d.family_name, COUNT(*) AS n FROM f1_driver_standings s
+                  JOIN f1_drivers d USING (driver_id) WHERE {' AND '.join(filters)} GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10"""
+    rows = con.execute(sql).fetchall()
+    top = leaders(rows)
+    if top is None:
+        return None
+    kind = "constructors" if by_team else "drivers"
+    each = " each" if " and " in top else ""
+    return {"answer": f"{top} won the most {kind} championships{when}, with {rows[0][1]}{each}.", "sql": sql}
+
+
+def most_answer(text: str) -> dict:
+    by_team = re.search(r"\b(team|constructor)\b", text) is not None
+    if TITLES.search(text):
+        return titles_answer(text, by_team or "constructors" in text)
+    metric = pick_metric(text)
+    if metric is None or re.search(r"\bsprints?\b", text):
+        return None  # this only ranks grand prix results
+    _, condition, _, many = metric
+    period, when, rest = period_filter(text)
+    race, rest = find_name(rest, RACE_NAMES)
+    circuit, rest = (None, rest) if race else find_name(rest, CIRCUITS)
+    team, rest = (None, rest) if by_team else find_name(rest, CONSTRUCTORS)  # most podiums for Ligier
     if set(rest.split()) - MOST_FILLER:
         return None
-    by_team = re.search(r"\b(team|constructor)\b", text) is not None
+    filters = place_filters(race, circuit) + ([team_filter(team)] if team else []) + ([period] if period else [])
+    where_of = " AND ".join(filters)
+    place = (f" at the {race}" if race else f" at {circuit}" if circuit else "") + (f" for {team}" if team else "")
     if condition is None:
-        sql = most_points_sql(by_team, period)
+        sql = most_points_sql(by_team, period) if not (race or circuit or team) else most_points_sql(by_team, where_of)
         rows = con.execute(sql).fetchall()
         if not rows or (len(rows) == 2 and rows[0][1] == rows[1][1]):
             return None
         season = SEASON.search(when)
         so_far = " so far" if season and one_season(period) and season_running(int(season.group(1))) else ""
-        return {"answer": f"{rows[0][0]} scored the most points{when}{so_far}, with {number(rows[0][1])}.", "sql": sql}
+        return {"answer": f"{rows[0][0]} scored the most points{place}{when}{so_far}, with {number(rows[0][1])}.", "sql": sql}
     column = TEAM_COLUMN if by_team else "driver_name"
-    total = "COUNT(DISTINCT season * 100 + round)" if by_team and "= 1" in condition else "COUNT(*)"
-    where = f"{period} AND {condition}" if period else condition
-    sql = f"SELECT {column}, {total} AS n FROM f1_results WHERE {where} GROUP BY 1 ORDER BY n DESC LIMIT 2"
+    # a shared drive puts two of a team's cars on one win or one entry
+    total = "COUNT(DISTINCT season * 100 + round)" if by_team and condition in ("position = 1", "grid = 1", "TRUE") else "COUNT(*)"
+    where = " AND ".join(filters + [condition])
+    sql = f"SELECT {column}, {total} AS n FROM f1_results WHERE {where} GROUP BY 1 ORDER BY n DESC, 1 LIMIT 10"
     rows = con.execute(sql).fetchall()
-    if not rows or (len(rows) == 2 and rows[0][1] == rows[1][1]):
-        return None  # a tie needs a list, not one name
-    return {"answer": f"{rows[0][0]} had the most {many}{when}, with {rows[0][1]}.", "sql": sql}
+    top = leaders(rows)
+    if top is None:
+        return None
+    each = " each" if " and " in top else ""
+    if condition == "TRUE":
+        return {"answer": f"{top} entered the most races{place}{when}, with {rows[0][1]}{each}.", "sql": sql}
+    return {"answer": f"{top} had the most {many}{place}{when}, with {rows[0][1]}{each}.", "sql": sql}
 
 
 def pit_answer(text: str) -> dict:
