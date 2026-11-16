@@ -46,6 +46,8 @@ def record(q: dict) -> dict:
 
 
 def main():
+    # read now, since commits made while a long run is going don't describe the code it loaded
+    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
     questions = json.loads((REPO / "eval" / "questions.json").read_text(encoding="utf-8"))
     questions += [{"id": f"example_{i + 1:02}", "split": "examples", "kind": "example", "question": text, "truth_sql": None}
                   for i, text in enumerate(EXAMPLES)]
@@ -63,7 +65,6 @@ def main():
             print(f"{n}/{len(questions)} {row['seconds']:>5}s {row['path']:<10} {row.get('outcome', ''):<7} {q['question'][:70]}",
                   flush=True)
 
-    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
     rows = [done[q["id"]] for q in questions]
     OUT.write_text(json.dumps({"recorded": date.today().isoformat(), "commit": commit, "rows": rows},
                               ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
