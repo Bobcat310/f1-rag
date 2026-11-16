@@ -483,7 +483,9 @@ def team_season_lines(team: str, year: int, when: str) -> list:
                               ORDER BY points DESC LIMIT 2""", [year]).fetchall()
     drivers = con.execute(f"""SELECT driver_name FROM f1_results WHERE season = ? AND {team_filter(team)}
                               GROUP BY 1 ORDER BY SUM(points) DESC LIMIT 2""", [year]).fetchall()
-    return ([f"In the {year} constructors championship, {entry} " for (entry,) in entries]
+    # a season still running reads "After round 18 of the 2026 constructors championship, Red Bull was 3rd"
+    table = f"{when} the {year} constructors championship" if when.startswith("After") else f"In the {year} constructors championship"
+    return ([f"{table}, {entry} " for (entry,) in entries]
             + [f"{when} the {year} season, {driver} " for (driver,) in drivers])
 
 

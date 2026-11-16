@@ -236,6 +236,15 @@ assert focus_lines("Vettel or Alonso - whose career was more successful?") == [
 assert NOT_IN_DATA.search("What position was Lewis Hamilton running in on lap 30 of the 2021 Sao Paulo Grand Prix?")
 assert not NOT_IN_DATA.search("On which lap did Hamilton make his first pit stop in the 2021 Sao Paulo Grand Prix?")
 
+# every pinned start must begin a real corpus sentence, or the pin silently does nothing
+CORPUS = (Path(__file__).resolve().parent.parent / "data" / "processed" / "corpus.txt").read_text(encoding="utf-8").splitlines()
+for question in ("How has Red Bull's 2026 season been going so far?", "How did Ferrari's 1979 season go?",
+                 "Describe Lando Norris's 2026 season", "Tell me about the 2011 Monaco Grand Prix", "Tell me about Monza",
+                 "Compare Ayrton Senna and Alain Prost", "How did Lotus do in 1963?",
+                 "Why did Max Verstappen not finish the 2021 British Grand Prix?"):
+    for start in focus_lines(question):
+        assert any(line.startswith(start) for line in CORPUS), f"{question}: no sentence starts with {start!r}"
+
 # refusals read only the clauses that ask something
 from src.text_to_sql import asked_part, invented_names, refuses  # noqa: E402
 assert asked_part("Interlagos 2003 was a bizarre, rain-soaked race - what happened and who ended up winning it?") == \
