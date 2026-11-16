@@ -10,13 +10,15 @@ from src.text_to_sql import LLM_OPTIONS, MODEL, NO_SQL, client, invented_names, 
 
 NARRATIVE = re.compile(r"^\s*(tell me|describe|explain|why|how did|how was|compare|summari[sz]e|what happened)", re.IGNORECASE)
 FACT = re.compile(r"\b(how many|number of|tally|who|which|most|average|total|what is the|fastest|oldest|youngest)\b", re.IGNORECASE)
+# "Mansell vs Piquet - who had the better career?" asks for a judgement the tables can't make, so it gets both records
+COMPARISON = re.compile(r"\b(vs\.?|versus|compared? (to|with)|who had the better|whose career)\b", re.IGNORECASE)
 
 
 def route(question: str) -> str:
     """refuse: data we don't have. vector: open questions. sql: one exact answer."""
     if refuses(question):
         return "refuse"
-    if NARRATIVE.search(question):
+    if NARRATIVE.search(question) or COMPARISON.search(question):
         return "vector"
     if FACT.search(question):
         return "sql"
@@ -62,8 +64,9 @@ def answer_vector(question: str) -> tuple:
     pinned = pinned_lines(question)
     found = find_context(question, pinned=pinned)
     # Sentences pinned for what the question names already are the answer to an open question,
-    # and a paraphrase can drop their main facts. Asking who, which or how many still needs the model.
-    if pinned and not FACT.search(question):
+    # and a paraphrase can drop their main facts. Asking who, which or how many still needs the model,
+    # except a comparison of two named subjects, where the records side by side are the honest answer.
+    if pinned and (not FACT.search(question) or (COMPARISON.search(question) and len(pinned) >= 2)):
         return " ".join(pinned), found
     return answer_from_context(question, found), found
 
