@@ -245,6 +245,34 @@ for question in ("How has Red Bull's 2026 season been going so far?", "How did F
     for start in focus_lines(question):
         assert any(line.startswith(start) for line in CORPUS), f"{question}: no sentence starts with {start!r}"
 
+# opening clauses: dropped when they name nothing, moved to the end when they do
+from src.templates import question_first  # noqa: E402
+assert question_first("Settling a bet here: who was the Formula 1 world drivers' champion in 1964?") == \
+    "who was the Formula 1 world drivers' champion in 1964"
+assert question_first("During his years at Ferrari, how many times did Rubens Barrichello finish on the podium?") == \
+    "how many times did Rubens Barrichello finish on the podium During his years at Ferrari"
+assert question_first("Who won the 2021 Abu Dhabi Grand Prix?") == "Who won the 2021 Abu Dhabi Grand Prix?"
+name("Settling a bet here: who was the Formula 1 world drivers' champion in 1964?", "John Surtees")
+number("During his years at Ferrari, how many times did Rubens Barrichello finish on the podium?",
+       "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Rubens Barrichello' AND constructor = 'Ferrari' AND position <= 3")
+name("Monaco 1981, who started from pole position?", "Nelson Piquet")
+name("Across the 1960s, which driver stood on the podium the most times?", "Graham Hill")
+declined("Of the 18 races run so far in 2026, how many have been won by a Mercedes?")  # "run so far" isn't understood
+# more wording
+name("Which outfit topped the constructors' table in 1967?", "Brabham")
+name("Who ended up as the 1970 world champion?", "Jochen Rindt")
+number("what was the avg pit stop duration at monaco 2024",
+       "SELECT ROUND(AVG(duration), 2) FROM f1_pit_stops WHERE season = 2024 AND race_name = 'Monaco Grand Prix' AND duration <= 120")
+number("How many world championship Grands Prix were held at Brands Hatch?",
+       "SELECT COUNT(*) FROM f1_races WHERE circuit_id = 'brands_hatch' AND (season, round) IN (SELECT season, round FROM f1_results)")
+# open-ended periods
+number("How many sprint wins has Max Verstappen had since 2021?",
+       "SELECT COUNT(*) FROM f1_sprint_results WHERE driver_name = 'Max Verstappen' AND season >= 2021 AND position = 1")
+number("How many wins did Ferrari have before 1960?",
+       "SELECT COUNT(DISTINCT season * 100 + round) FROM f1_results WHERE constructor = 'Ferrari' AND season < 1960 AND position = 1")
+number("How many podiums did Lewis Hamilton get from 2014 onwards?",
+       "SELECT COUNT(*) FROM f1_results WHERE driver_name = 'Lewis Hamilton' AND season >= 2014 AND position <= 3")
+
 # refusals read only the clauses that ask something
 from src.text_to_sql import asked_part, invented_names, refuses  # noqa: E402
 assert asked_part("Interlagos 2003 was a bizarre, rain-soaked race - what happened and who ended up winning it?") == \

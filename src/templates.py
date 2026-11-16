@@ -7,15 +7,17 @@ recognise returns None, so the question goes to the model instead of being misre
 import re
 
 from src.text_gen import number, ordinal, team_families
-from src.text_to_sql import con, words
+from src.text_to_sql import ASKING, CLAUSE, con, words
 
 SEASON = re.compile(r"\b(19[5-9]\d|20[0-2]\d)\b")
 DECADE = re.compile(r"\b(19[5-9]|20[0-2])0s\b")
 SPAN = re.compile(r"\b(between|from) (19[5-9]\d|20[0-2]\d) (and|to|until) (19[5-9]\d|20[0-2]\d)\b")
+# "since 2021" includes 2021, "after 2021" doesn't, and "before 1990" stops at 1989
+OPEN_SPAN = re.compile(r"\b(?:(since|after|before) (19[5-9]\d|20[0-2]\d)|(from) (19[5-9]\d|20[0-2]\d) (?:onwards?|on))\b")
 COUNT = re.compile(r"^(how many|(what (is|was) )?(the )?(total )?number of)\b")
 # "how many races in 2024" counts the events themselves, not a driver's results
-EVENTS = re.compile(r"^(how many|(what (is|was) )?(the )?(total )?number of)( different)? (races|grands prix|sprints|sprint races|rounds"
-                    r"|circuits|tracks|venues)\b")
+EVENTS = re.compile(r"^(how many|(what (is|was) )?(the )?(total )?number of)( different)?( world championship| championship| formula one)?"
+                    r" (races|grands prix|sprints|sprint races|rounds|circuits|tracks|venues)\b")
 # "In 2012, how many..." puts the period first, and every template reads the question from its start
 LEADING_PERIOD = re.compile(r"^(in|across|during|over|throughout) (the )?((19[5-9]|20[0-2])\ds?) ")
 WINNER = re.compile(r"^(who (won|was the winner|finished first|came first|took (the )?(win|victory))|which (driver|team|constructor) won)\b")
@@ -27,10 +29,10 @@ MOST = re.compile(r"^(who|which (driver|team|constructor))\b.*\bmost\b")
 CIRCUIT_MOST = re.compile(r"^which (track|circuit|venue)\b.*\bmost\b")
 MORE_THAN_ANY = re.compile(r"\bmore\b(.*)\bthan any other( \w+)?$")
 PIT_STOPS = re.compile(r"\bpit stops?\b")
-AVERAGE_PIT = re.compile(r"^((what (is|was) )?(the )?(average|mean) pit stop"
+AVERAGE_PIT = re.compile(r"^((what (is|was) )?(the )?(average|avg|mean) pit stop"
                          r"|(on average )?how long (did|does|do|was|is) ((a|an|the) )?(average )?pit stops?( take)?)\b")
-CHAMPION = re.compile(r"^(who|which (driver|team|constructor)) (won|was|became|took|claimed|topped|(finished|came|ended) (top|first))\b"
-                      r".*\b(champion|championship|title)\b")
+CHAMPION = re.compile(r"^(who|which (driver|team|constructor|outfit|squad)) (won|was|became|took|claimed|topped|ended up( as)?"
+                      r"|(finished|came|ended) (top|first))\b.*\b(champion|championship|title|table|standings)\b")
 
 DNF = "status <> 'Finished' AND status <> 'Lapped' AND status NOT LIKE '+%'"
 # (pattern on the question, filter, singular label, plural label)
@@ -49,16 +51,18 @@ RACE_FILLER = SHARED_FILLER | set("""who which what driver team constructor won 
 COUNT_FILLER = SHARED_FILLER | set("""how many number total career overall all time times grands sprint sprints win wins won victory victories
     pole poles position positions podium podiums finish finishes finished not fail failed retire retired
     retirement retirements dnf dnfs points score scored take took get got claim claimed achieve achieved
-    earn earned start started secure secured during altogether rack racked up stood stand collect collected""".split())
+    earn earned start started secure secured during altogether rack racked up stood stand collect collected
+    years spell stint""".split())
 MOST_FILLER = COUNT_FILLER | set("who which driver team constructor most often frequently".split())
 EVENT_FILLER = SHARED_FILLER | set("""how many what number total different sprint sprints round rounds circuit circuits track tracks
-    venue venues there been held run staged hosted season calendar championship world""".split())
+    venue venues there been held run staged hosted season calendar championship world grands""".split())
 CIRCUIT_FILLER = SHARED_FILLER | set("""which track tracks circuit circuits venue venues has have had hosted staged held
     most world championship grands""".split())
 PIT_FILLER = SHARED_FILLER | set("how many pit stop stops make made take took during total all there".split())
-AVERAGE_FILLER = PIT_FILLER | set("what average mean time duration length how long does do".split())
+AVERAGE_FILLER = PIT_FILLER | set("what average avg mean time duration length how long does do".split())
 TITLE_FILLER = SHARED_FILLER | set("""who which driver team constructor constructors drivers won was became took
-    claimed crowned world champion championship title topped top first ended finished came""".split())
+    claimed crowned world champion championship title topped top first ended finished came up as table standings
+    outfit squad""".split())
 
 
 def plain(text: str) -> str:
@@ -189,12 +193,23 @@ def title_answer(text: str, season: int) -> dict:
     return {"answer": f"{rows[0][0]} won the {season} {kind} championship.", "sql": sql}
 
 
+def one_season(period) -> bool:
+    """Standings answer a single season, while a span adds race rows up."""
+    return bool(period) and period.startswith("season = ")
+
+
 def period_filter(text: str) -> tuple:
     """Returns (SQL condition, phrase for the answer, the text with the period removed)."""
     span = SPAN.search(text)
     if span:
         start, end = sorted((int(span.group(2)), int(span.group(4))))
         return f"season BETWEEN {start} AND {end}", f" from {start} to {end}", text.replace(span.group(0), "")
+    open_span = OPEN_SPAN.search(text)
+    if open_span:
+        word, year = open_span.group(1) or open_span.group(3), int(open_span.group(2) or open_span.group(4))
+        condition = {"since": f"season >= {year}", "from": f"season >= {year}", "after": f"season > {year}",
+                     "before": f"season < {year}"}[word]
+        return condition, f" {'since' if word == 'from' else word} {year}", text.replace(open_span.group(0), "")
     decade = DECADE.search(text)
     season = SEASON.search(text)
     if decade:
@@ -265,7 +280,7 @@ def count_answer(text: str) -> dict:
 
 def most_points_sql(by_team: bool, period) -> str:
     """One season comes from the standings, which hold sprint points and old dropped scores. Longer spans add race and sprint points."""
-    if period and "BETWEEN" not in period:
+    if one_season(period):
         if by_team:
             return f"SELECT {TEAM_COLUMN}, SUM(points) AS n FROM f1_constructor_standings WHERE {period} GROUP BY 1 ORDER BY n DESC LIMIT 2"
         return f"""SELECT d.given_name || ' ' || d.family_name, s.points AS n FROM f1_driver_standings s
@@ -291,7 +306,7 @@ def most_answer(text: str) -> dict:
         if not rows or (len(rows) == 2 and rows[0][1] == rows[1][1]):
             return None
         season = SEASON.search(when)
-        so_far = " so far" if season and "BETWEEN" not in period and season_running(int(season.group(1))) else ""
+        so_far = " so far" if season and one_season(period) and season_running(int(season.group(1))) else ""
         return {"answer": f"{rows[0][0]} scored the most points{when}{so_far}, with {number(rows[0][1])}.", "sql": sql}
     column = TEAM_COLUMN if by_team else "driver_name"
     total = "COUNT(DISTINCT season * 100 + round)" if by_team and "= 1" in condition else "COUNT(*)"
@@ -361,7 +376,7 @@ def team_filter(team: str) -> str:
 
 def standings_points_sql(driver, team, period) -> str:
     """Race rows miss sprint points and old dropped scores, so a single season uses the standings."""
-    if period is None or "BETWEEN" in period or (driver and team):
+    if not one_season(period) or (driver and team):
         return None
     if team:
         return f"SELECT SUM(points) FROM f1_constructor_standings WHERE {period} AND {team_filter(team)}"
@@ -444,7 +459,7 @@ def event_count_answer(text: str) -> dict:
     kind = ("sprint" if sprint else "race") + ("" if value == 1 else "s")
     place = f" at the {race}" if race else f" at {circuit}" if circuit else ""
     season = SEASON.search(when)
-    if season and "BETWEEN" not in period and not (sprint or race or circuit) and season_running(int(season.group(1))):
+    if season and one_season(period) and not (sprint or race or circuit) and season_running(int(season.group(1))):
         planned = con.execute(f"SELECT COUNT(*) FROM f1_races WHERE {period}").fetchone()[0]
         return {"answer": f"{value} of the {planned} races on the calendar{when} have been run so far.", "sql": sql}
     return {"answer": f"There {'was' if value == 1 else 'were'} {value} {kind}{place}{when}.", "sql": sql}
@@ -512,13 +527,32 @@ def focus_lines(question: str) -> list:
     return [f"In the {year} {race_name}, {driver} ", summary] if driver else [summary]
 
 
+def question_first(question: str) -> str:
+    """
+    Every template reads the question from its start, so an opening clause moves out of the way.
+    One with no name or number ("Settling a bet here:") is dropped. One that has them ("During his
+    years at Ferrari,") moves to the end, where the every-word check still decides if it was understood.
+    """
+    parts = [part for part in CLAUSE.split(question) if part]
+    first = next((i for i, part in enumerate(parts) if ASKING.match(part)), 0)
+    if first == 0:
+        return question
+    opening, asked = " ".join(parts[:first]), " ".join(parts[first:])
+    if not re.search(r"\d", opening) and not re.findall(r"\b[A-Z]", opening)[1:]:
+        return asked
+    return f"{asked} {opening}"
+
+
 def template_answer(question: str) -> dict:
     """An answer with its SQL, or None when the question doesn't fit a template exactly."""
     # "Formula 1" would leave a stray 1, and "more ... than any other" is "most"
-    text = MORE_THAN_ANY.sub(r"most\1", spell_years(plain(question).replace("formula 1", "formula one"))).strip()
+    text = plain(question)
     lead = LEADING_PERIOD.match(text)
-    if lead:
+    if lead:  # "Across the 1960s, which driver..." reads as "which driver ... in the 1960s"
         text = f"{text[lead.end():]} in {lead.group(2) or ''}{lead.group(3)}"
+    else:
+        text = plain(question_first(question))
+    text = MORE_THAN_ANY.sub(r"most\1", spell_years(text.replace("formula 1", "formula one"))).strip()
     season = SEASON.search(text)
     if AVERAGE_PIT.search(text):
         return average_pit_answer(text)
